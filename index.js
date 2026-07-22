@@ -9,6 +9,10 @@ const W = 800, H = 400;
 const GROUND_Y = 340;        // where the terrain sits
 const GRAVITY = 0.25;
 const MAX_POWER = 22;
+const POWER_BAR_WIDTH = 140;
+const POWER_BAR_HEIGHT = 12;
+const POWER_BAR_X = W / 2 - POWER_BAR_WIDTH / 2;
+const POWER_BAR_Y = 20;
 
 // ---- player definitions ----
 const players = {
@@ -39,9 +43,16 @@ let projectile = {
     trail: []
 };
 
+// ---- aiming state ----
+let aiming = false;
+let aimAngle = 0;
+let aimPower = 0;
+let aimPointerX = 0;
+let aimPointerY = 0;
+
 let currentPlayer = 'p1';          // 'p1' or 'p2'
 let gameOver = false;
-let turnLock = false;             // block clicks while projectile flies
+let turnLock = false;             // block while projectile flies
 
 // ---- helper: get opponent ----
 function getOpponent(playerId) {
@@ -50,7 +61,6 @@ function getOpponent(playerId) {
 
 // ---- reset round (keep scores) ----
 function resetRound() {
-    // reset positions & health
     players.p1.x = 100;
     players.p1.y = GROUND_Y - 20;
     players.p1.alive = true;
@@ -63,11 +73,11 @@ function resetRound() {
     projectile.trail = [];
     gameOver = false;
     turnLock = false;
+    aiming = false;
 
-    // start with player 1
     currentPlayer = 'p1';
     updateTurnUI();
-    statusMsg.innerText = '⚔️  aim & fire';
+    statusMsg.innerText = '👆 tap to aim, swipe for power';
     draw();
 }
 
@@ -169,6 +179,70 @@ function draw() {
         ctx.fill();
     }
 
+    // ---- aiming visualization ----
+    if (aiming) {
+        const shooter = players[currentPlayer];
+        if (shooter.alive) {
+            const startX = shooter.x + Math.cos(aimAngle) * 24;
+            const startY = shooter.y + Math.sin(aimAngle) * 24 - 6;
+            const lineLen = 20 + aimPower * 12;
+            const endX = startX + Math.cos(aimAngle) * lineLen;
+            const endY = startY + Math.sin(aimAngle) * lineLen;
+
+            // Aim direction dashed line
+            ctx.save();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = 'rgba(255, 255, 200, 0.7)';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Arrow tip
+            ctx.fillStyle = 'rgba(255, 255, 200, 0.8)';
+            ctx.beginPath();
+            ctx.arc(endX, endY, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Power bar
+            const powerFrac = aimPower / MAX_POWER;
+            const barColor = powerFrac < 0.33 ? '#7ae07a' : powerFrac < 0.66 ? '#e0d07a' : '#e07a7a';
+            
+            // Background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+            ctx.roundRect(POWER_BAR_X - 2, POWER_BAR_Y - 2, POWER_BAR_WIDTH + 4, POWER_BAR_HEIGHT + 4, 4);
+            ctx.fill();
+            
+            // Label
+            ctx.fillStyle = '#f0f7d8';
+            ctx.font = 'bold 11px "Segoe UI", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('POWER', W / 2, POWER_BAR_Y - 6);
+            ctx.textAlign = 'left';
+            
+            // Bar track
+            ctx.fillStyle = 'rgba(30, 30, 30, 0.6)';
+            ctx.roundRect(POWER_BAR_X, POWER_BAR_Y, POWER_BAR_WIDTH, POWER_BAR_HEIGHT, 3);
+            ctx.fill();
+            
+            // Bar fill
+            ctx.fillStyle = barColor;
+            ctx.roundRect(POWER_BAR_X, POWER_BAR_Y, POWER_BAR_WIDTH * powerFrac, POWER_BAR_HEIGHT, 3);
+            ctx.fill();
+            
+            // Bar border
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.roundRect(POWER_BAR_X, POWER_BAR_Y, POWER_BAR_WIDTH, POWER_BAR_HEIGHT, 3);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+    }
+
     // ---- projectile ----
     if (projectile.active || projectile.trail.length > 0) {
         // trail
@@ -225,35 +299,66 @@ function draw() {
     ctx.shadowOffsetY = 0;
 }
 
-// ---- fire projectile toward click ----
-function fireProjectile(clickX, clickY) {
+// ---- round rect helper ----
+CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    this.beginPath();
+    this.moveTo(x + r, y);
+    this.lineTo(x + w - r, y);
+    this.quadraticCurveTo(x + w, y, x + w, y + r);
+    this.lineTo(x + w, y + h - r);
+    this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    this.lineTo(x + r, y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - r);
+    this.lineTo(x, y + r);
+    this.quadraticCurveTo(x, y, x + r, y);
+    this.closePath();
+    return this;
+};
+
+// ---- fire projectile using current aimAngle and aimPower ----
+function fireProjectile() {
     if (gameOver || turnLock) return false;
+    if (!aiming) return false;
 
     const shooter = players[currentPlayer];
-    if (!shooter.alive) {
-        // should never happen, but safety
+    if (!shooter.alive) return false;
+
+    if (aimPower < 0.5) {
+        // Too weak, ignore
+        statusMsg.innerText = `💨 too weak! swipe further`;
+        aiming = false;
+        draw();
         return false;
     }
 
-    const dx = clickX - shooter.x;
-    const dy = clickY - shooter.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist < 5) return false;   // too close, ignore
-
-    // power scaling: max power when click is far (clamp)
-    const power = Math.min(MAX_POWER, dist / 32);
-    const angle = Math.atan2(dy, dx);
-
-    projectile.x = shooter.x + Math.cos(angle) * 22;
-    projectile.y = shooter.y + Math.sin(angle) * 22 - 6;
-    projectile.vx = Math.cos(angle) * power;
-    projectile.vy = Math.sin(angle) * power;
+    projectile.x = shooter.x + Math.cos(aimAngle) * 24;
+    projectile.y = shooter.y + Math.sin(aimAngle) * 24 - 6;
+    projectile.vx = Math.cos(aimAngle) * aimPower;
+    projectile.vy = Math.sin(aimAngle) * aimPower;
     projectile.active = true;
     projectile.trail = [];
     turnLock = true;
+    aiming = false;
 
     statusMsg.innerText = `🎯 ${currentPlayer.toUpperCase()} fires!`;
+    draw();
+
+    // start animation loop
+    runProjectileAnimation();
     return true;
+}
+
+function runProjectileAnimation() {
+    const interval = setInterval(() => {
+        if (!projectile.active || gameOver) {
+            clearInterval(interval);
+            if (gameOver) draw();
+            return;
+        }
+        updateProjectile();
+    }, 20);
 }
 
 // ---- update projectile physics & collision ----
@@ -286,9 +391,7 @@ function updateProjectile() {
         projectile.active = false;
         projectile.vx = 0;
         projectile.vy = 0;
-        // check hit on ground (if near opponent)
         checkHitGround();
-        // next turn
         endTurn();
         draw();
         return;
@@ -308,7 +411,7 @@ function updateProjectile() {
             const winner = currentPlayer;
             players[winner].wins += 1;
             statusMsg.innerText = `🏆 ${winner.toUpperCase()} wins!`;
-            turnLock = true;   // block further clicks
+            turnLock = true;
             draw();
             return;
         }
@@ -327,7 +430,6 @@ function updateProjectile() {
 
 // ---- check if projectile landed near opponent (ground hit) ----
 function checkHitGround() {
-    // if projectile stopped on ground, check if it's near opponent
     const opponentId = getOpponent(currentPlayer);
     const opp = players[opponentId];
     if (!opp.alive) return;
@@ -335,7 +437,6 @@ function checkHitGround() {
     const dx = projectile.x - opp.x;
     const dy = projectile.y - opp.y;
     const dist = Math.hypot(dx, dy);
-    // if close enough, it's a hit (direct impact on ground)
     if (dist < opp.radius + 14) {
         opp.alive = false;
         gameOver = true;
@@ -349,12 +450,8 @@ function checkHitGround() {
 // ---- end turn, switch player ----
 function endTurn() {
     if (gameOver) return;
-    // switch player
     currentPlayer = getOpponent(currentPlayer);
-    // if opponent is dead, game already over
     if (!players[currentPlayer].alive) {
-        // but if somehow the opponent died earlier, we should have gameOver already
-        // but safety: declare winner
         const alivePlayer = players.p1.alive ? 'p1' : 'p2';
         if (players.p1.alive || players.p2.alive) {
             gameOver = true;
@@ -367,39 +464,76 @@ function endTurn() {
     }
     updateTurnUI();
     turnLock = false;
-    statusMsg.innerText = `🔫 ${currentPlayer.toUpperCase()} turn`;
+    statusMsg.innerText = `👆 tap to aim, swipe for power`;
     draw();
 }
 
-// ---- canvas click handler ----
-canvas.addEventListener('click', (e) => {
-    if (gameOver || turnLock) return;
+// ---- get canvas-relative coordinates from pointer event ----
+function getCanvasCoords(e) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
-    const mouseX = (e.clientX - rect.left) * scaleX;
-    const mouseY = (e.clientY - rect.top) * scaleY;
+    return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+    };
+}
 
+// ---- pointer events (works for both touch and mouse) ----
+canvas.addEventListener('pointerdown', (e) => {
+    if (gameOver || turnLock) return;
     const shooter = players[currentPlayer];
     if (!shooter.alive) {
         statusMsg.innerText = `⛔ ${currentPlayer.toUpperCase()} is dead!`;
         return;
     }
 
-    const success = fireProjectile(mouseX, mouseY);
-    if (success) {
-        // start animation loop
-        updateProjectile();
-        // continue animation until projectile stops
-        const interval = setInterval(() => {
-            if (!projectile.active || gameOver) {
-                clearInterval(interval);
-                // if gameOver draw one last time
-                if (gameOver) draw();
-                return;
-            }
-            updateProjectile();
-        }, 20);
+    const pos = getCanvasCoords(e);
+    const dx = pos.x - shooter.x;
+    const dy = pos.y - shooter.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 10) return; // too close, ignore
+
+    aimAngle = Math.atan2(dy, dx);
+    aimPower = 0;
+    aiming = true;
+    aimPointerX = pos.x;
+    aimPointerY = pos.y;
+
+    statusMsg.innerText = `⬆️ swipe to set power, release to fire`;
+    draw();
+});
+
+canvas.addEventListener('pointermove', (e) => {
+    if (!aiming) return;
+    const shooter = players[currentPlayer];
+    if (!shooter || !shooter.alive) return;
+
+    const pos = getCanvasCoords(e);
+    aimPointerX = pos.x;
+    aimPointerY = pos.y;
+
+    // Power based on distance from shooter to current pointer, capped
+    const dx = pos.x - shooter.x;
+    const dy = pos.y - shooter.y;
+    const dist = Math.hypot(dx, dy);
+    aimPower = Math.min(MAX_POWER, dist / 28);
+
+    // Power can't be negative
+    if (aimPower < 0) aimPower = 0;
+
+    draw();
+});
+
+canvas.addEventListener('pointerup', (e) => {
+    if (!aiming) return;
+    fireProjectile();
+});
+
+canvas.addEventListener('pointercancel', () => {
+    if (aiming) {
+        aiming = false;
+        draw();
     }
 });
 
@@ -418,15 +552,6 @@ window.addEventListener('keydown', (e) => {
         e.preventDefault();
     }
 });
-
-// ---- start draw loop (idle) ----
-function idleLoop() {
-    if (!projectile.active && !gameOver) {
-        draw();
-    }
-    requestAnimationFrame(idleLoop);
-}
-idleLoop();
 
 // ---- handle window resize / redraw ----
 window.addEventListener('resize', () => { draw(); });
