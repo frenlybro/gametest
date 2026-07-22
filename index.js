@@ -481,6 +481,46 @@ function getCanvasCoords(e) {
 
 // ---- pointer events (works for both touch and mouse) ----
 canvas.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); // stop browser from stealing the gesture
+    pointerDownHandler(e);
+});
+
+canvas.addEventListener('pointermove', (e) => {
+    e.preventDefault();
+    pointerMoveHandler(e);
+});
+
+canvas.addEventListener('pointerup', (e) => {
+    e.preventDefault();
+    pointerUpHandler();
+});
+
+canvas.addEventListener('pointercancel', () => {
+    // Mobile often fires pointercancel instead of pointerup.
+    // Fire the shot with whatever power/angle was set.
+    pointerUpHandler();
+});
+
+// ---- explicit touch events (iOS Safari fallback) ----
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault(); // CRITICAL: stops browser from canceling the touch
+    const touch = e.changedTouches[0];
+    pointerDownHandler(touch);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    pointerMoveHandler(touch);
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    pointerUpHandler();
+}, { passive: false });
+
+// ---- shared handlers ----
+function pointerDownHandler(e) {
     if (gameOver || turnLock) return;
     const shooter = players[currentPlayer];
     if (!shooter.alive) {
@@ -502,9 +542,9 @@ canvas.addEventListener('pointerdown', (e) => {
 
     statusMsg.innerText = `⬆️ swipe to set power, release to fire`;
     draw();
-});
+}
 
-canvas.addEventListener('pointermove', (e) => {
+function pointerMoveHandler(e) {
     if (!aiming) return;
     const shooter = players[currentPlayer];
     if (!shooter || !shooter.alive) return;
@@ -524,20 +564,12 @@ canvas.addEventListener('pointermove', (e) => {
     aimPower = Math.min(MAX_POWER, effectiveDist / 55);
 
     draw();
-});
+}
 
-canvas.addEventListener('pointerup', (e) => {
+function pointerUpHandler() {
     if (!aiming) return;
     fireProjectile();
-});
-
-canvas.addEventListener('pointercancel', () => {
-    if (aiming) {
-        // Mobile often fires pointercancel instead of pointerup.
-        // Fire the shot with whatever power/angle was set.
-        fireProjectile();
-    }
-});
+}
 
 // ---- reset button ----
 document.getElementById('resetBtn').addEventListener('click', () => {
