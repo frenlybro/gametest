@@ -538,24 +538,6 @@ canvas.addEventListener('pointercancel', () => {
     pointerUpHandler();
 });
 
-// ---- explicit touch events (iOS Safari fallback) ----
-canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault(); // CRITICAL: stops browser from canceling the touch
-    const touch = e.changedTouches[0];
-    pointerDownHandler(touch);
-}, { passive: false });
-
-canvas.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    const touch = e.changedTouches[0];
-    pointerMoveHandler(touch);
-}, { passive: false });
-
-canvas.addEventListener('touchend', (e) => {
-    e.preventDefault();
-    pointerUpHandler();
-}, { passive: false });
-
 // ---- shared handlers ----
 function pointerDownHandler(e) {
     if (gameOver || turnLock) return;
