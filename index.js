@@ -558,10 +558,10 @@ function pointerMoveHandler(e) {
     const dy = pos.y - shooter.y;
     const dist = Math.hypot(dx, dy);
 
-    // Dead zone: first 20px of movement give no power
-    const effectiveDist = Math.max(0, dist - 20);
-    aimPower = Math.min(MAX_POWER, effectiveDist / 37);
-    // ^ 50% more sensitive than previous (55 / 1.5 ≈ 37)
+    // Dead zone: first 9px of movement give no power
+    const effectiveDist = Math.max(0, dist - 9);
+    aimPower = Math.min(MAX_POWER, effectiveDist / 17);
+    // ^ 50% more sensitive than previous (25 / 1.5 ≈ 17)
 
     draw();
 }
