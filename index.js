@@ -6,13 +6,102 @@ const statusMsg = document.getElementById('statusMsg');
 
 // ---- dimensions ----
 const W = 800, H = 400;
-const GROUND_Y = 340;        // where the terrain sits
+const GROUND_Y = 340;        // baseline ground level (used for player start)
 const GRAVITY = 0.25;
 const MAX_POWER = 22;
 const POWER_BAR_WIDTH = 140;
 const POWER_BAR_HEIGHT = 12;
 const POWER_BAR_X = W / 2 - POWER_BAR_WIDTH / 2;
 const POWER_BAR_Y = 20;
+
+// ---- terrain types ----
+const TERRAIN_TYPES = ['grass', 'desert', 'snow'];
+const TERRAIN_COLORS = {
+    grass: { base: '#5d814a', top: '#7aa55a', blade: '#4f7340', rock: '#5c4a3a', shadow: '#3f5c34' },
+    desert: { base: '#d4a75a', top: '#e8c97a', blade: '#c4944a', rock: '#8b6b4a', shadow: '#a07840' },
+    snow:   { base: '#c8d6e0', top: '#e8f0f5', blade: '#b0c0cc', rock: '#8090a0', shadow: '#8898aa' }
+};
+
+// ---- terrain state ----
+let terrain = {
+    type: 'grass',
+    colors: TERRAIN_COLORS.grass,
+    heights: [],   // height[] per x column, 0..0.8 (0 = flat ground, 0.8 = 80% up from bottom)
+    rocks: []      // {x, y, r}
+};
+
+// ---- generate terrain ----
+function generateTerrain(type) {
+    terrain.type = type;
+    terrain.colors = TERRAIN_COLORS[type];
+    terrain.heights = [];
+    terrain.rocks = [];
+
+    // Seed based on type + round for consistent randomness within a type
+    const seed = (type.charCodeAt(0) * 1000 + Math.floor(Math.random() * 9999));
+    const rng = mulberry32(seed);
+
+    // Generate terrain: never flat, always rolling hills 25-80% height
+    const terrainVariance = Math.pow(rng(), 0.5); // strong bias toward higher values
+    const maxAmplitude = 0.25 + terrainVariance * 0.55; // min 25%, max 80%
+    const ridgeFreq = 0.0015 + rng() * 0.002; // lower freq = broader, rounder hills
+    const ridgeOffset = rng() * Math.PI * 2;
+
+    for (let x = 0; x < W; x++) {
+        let h = 0.15; // base height so it's never flat
+
+        // main ridge — broad hill shape
+        const ridge = Math.sin(x * ridgeFreq + ridgeOffset) * maxAmplitude;
+        h += ridge;
+
+        // second blended sine for organic shape
+        h += Math.sin(x * ridgeFreq * 2.3 + ridgeOffset * 1.7) * maxAmplitude * 0.25;
+
+        // rolling texture — always visible, prevents any flat stretches
+        h += Math.sin(x * 0.015 + rng() * 6.28) * maxAmplitude * 0.25;
+
+        // clamp to 0.1..0.8
+        h = Math.max(0.1, Math.min(0.8, h));
+        terrain.heights.push(h);
+    }
+
+    // Smooth for roundness
+    for (let pass = 0; pass < 5; pass++) {
+        for (let x = 1; x < W - 1; x++) {
+            terrain.heights[x] = (terrain.heights[x-1] + terrain.heights[x] + terrain.heights[x+1]) / 3;
+        }
+    }
+
+    // Place rocks (10-25 rocks)
+    const numRocks = 10 + Math.floor(rng() * 15);
+    for (let i = 0; i < numRocks; i++) {
+        const rx = rng() * (W - 40) + 20;
+        const yi = Math.floor(rx);
+        const rh = terrain.heights[Math.min(Math.max(yi, 0), W-1)];
+        const ry = getTerrainYAt(rx);
+        const rr = 3 + rng() * 12;
+        // don't place rocks too close to players
+        if ((rx < 160 && rx > 60) || (rx > 640 && rx < 740)) continue;
+        terrain.rocks.push({ x: rx, y: ry, r: rr });
+    }
+}
+
+// Simple seeded PRNG (mulberry32)
+function mulberry32(a) {
+    return function() {
+        a |= 0; a = a + 0x6D2B79F5 | 0;
+        var t = Math.imul(a ^ a >>> 15, 1 | a);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+}
+
+function getTerrainYAt(x) {
+    const xi = Math.max(0, Math.min(Math.floor(x), W - 1));
+    const h = terrain.heights[xi] || 0.0;
+    // h=0 -> bottom of screen (flat ground), h=0.8 -> 80% up from bottom
+    return H - h * H;
+}
 
 // ---- player definitions ----
 const players = {
@@ -51,15 +140,13 @@ let aimPointerX = 0;
 let aimPointerY = 0;
 
 // ---- movement state ----
-let lastClickTime = 0;
-let lastClickX = 0;
-let lastClickY = 0;
+let lastMoveClickTime = null; // null = no previous click yet
+let lastMoveClickX = 0;
 const DOUBLE_CLICK_MS = 400;
 const GROUND_ZONE = 0.2;          // bottom 20% of screen height
 const P1_MAX_X = W * 0.45;        // P1 can move within left 45%
 const P2_MIN_X = W * 0.55;        // P2 can move within right 45%
-const MOVE_SPEED = 3;             // pixels per frame during animation
-let moveAnim = null;              // { shooter, fromX, toX, callback }
+let moveAnim = null;              // { shooter, fromX, toX, startedAt, duration }
 
 let currentPlayer = 'p1';          // 'p1' or 'p2'
 let gameOver = false;
@@ -72,12 +159,17 @@ function getOpponent(playerId) {
 
 // ---- reset round (keep scores) ----
 function resetRound() {
+    // Randomize terrain type
+    const type = TERRAIN_TYPES[Math.floor(Math.random() * TERRAIN_TYPES.length)];
+    generateTerrain(type);
+
+    // Place players on terrain at their start positions
     players.p1.x = 100;
-    players.p1.y = GROUND_Y - 20;
+    players.p1.y = getTerrainYAt(100) - 20;
     players.p1.alive = true;
 
     players.p2.x = 700;
-    players.p2.y = GROUND_Y - 20;
+    players.p2.y = getTerrainYAt(700) - 20;
     players.p2.alive = true;
 
     projectile.active = false;
@@ -88,7 +180,7 @@ function resetRound() {
 
     currentPlayer = 'p1';
     updateTurnUI();
-    statusMsg.innerText = '👆 tap to aim, swipe for power, double tap to move';
+    statusMsg.innerText = `🗺️ ${type} terrain — double tap bottom to move`;
     draw();
 }
 
@@ -106,30 +198,78 @@ function updateTurnUI() {
     turnIndicator.style.color = currentPlayer === 'p1' ? '#db3a3a' : '#3a7bd5';
 }
 
+// ---- draw terrain ----
+function drawTerrain() {
+    const c = terrain.colors;
+
+    // build ground polygon points
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    for (let x = 0; x <= W; x += 2) {
+        const y = getTerrainYAt(x);
+        ctx.lineTo(x, y);
+    }
+    ctx.lineTo(W, H);
+    ctx.closePath();
+
+    // gradient fill from top of terrain to bottom
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, c.top);
+    grad.addColorStop(0.5, c.base);
+    grad.addColorStop(1, c.shadow);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // grass blades (or sand ripples / snow bumps) on top edge
+    ctx.strokeStyle = c.blade;
+    ctx.lineWidth = 2;
+    for (let x = 0; x < W; x += 12) {
+        const y = getTerrainYAt(x);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - 3, y - 8);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x + 6, y);
+        ctx.lineTo(x + 9, y - 6);
+        ctx.stroke();
+    }
+
+    // rocks
+    for (const rock of terrain.rocks) {
+        ctx.fillStyle = c.rock;
+        ctx.shadowColor = 'rgba(0,0,0,0.3)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetY = 2;
+        ctx.beginPath();
+        ctx.ellipse(rock.x, rock.y, rock.r, rock.r * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+    }
+}
+
+// ---- draw sky background ----
+function drawSky() {
+    const colors = {
+        grass: ['#9ac7c7', '#7fb3b3'],
+        desert: ['#fce4b8', '#e8c97a'],
+        snow:   ['#e8f0f5', '#c8d6e0']
+    };
+    const [top, bottom] = colors[terrain.type] || colors.grass;
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, top);
+    grad.addColorStop(1, bottom);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+}
+
 // ---- draw terrain & characters ----
 function draw() {
     ctx.clearRect(0, 0, W, H);
 
-    // ---- ground ----
-    ctx.fillStyle = '#5d814a';
-    ctx.beginPath();
-    ctx.rect(0, GROUND_Y, W, H - GROUND_Y + 10);
-    ctx.fill();
-    // grass edge
-    ctx.fillStyle = '#7aa55a';
-    ctx.beginPath();
-    ctx.rect(0, GROUND_Y - 4, W, 8);
-    ctx.fill();
-    // small grass blades
-    ctx.strokeStyle = '#4f7340';
-    ctx.lineWidth = 2;
-    for (let i = 0; i < 60; i++) {
-        const x = (i * 15 + 7) % W;
-        ctx.beginPath();
-        ctx.moveTo(x, GROUND_Y - 2);
-        ctx.lineTo(x - 3, GROUND_Y - 12);
-        ctx.stroke();
-    }
+    drawSky();
+    drawTerrain();
 
     // ---- draw players ----
     for (const [id, p] of Object.entries(players)) {
@@ -385,7 +525,7 @@ function updateProjectile() {
     projectile.y += projectile.vy;
     projectile.vy += GRAVITY;
 
-    // boundary collision (walls / ground)
+    // boundary collision (walls / ground using terrain)
     const rad = projectile.radius;
     // left/right walls (bounce)
     if (projectile.x - rad < 0) {
@@ -396,9 +536,10 @@ function updateProjectile() {
         projectile.vx = -projectile.vx * 0.6;
     }
 
-    // ground collision (stop projectile)
-    if (projectile.y + rad > GROUND_Y) {
-        projectile.y = GROUND_Y - rad;
+    // terrain collision (use terrain height)
+    const groundY = getTerrainYAt(projectile.x);
+    if (projectile.y + rad > groundY) {
+        projectile.y = groundY - rad;
         projectile.active = false;
         projectile.vx = 0;
         projectile.vy = 0;
@@ -448,7 +589,9 @@ function checkHitGround() {
     const dx = projectile.x - opp.x;
     const dy = projectile.y - opp.y;
     const dist = Math.hypot(dx, dy);
-    if (dist < opp.radius + 14) {
+    // use approximate ground level at opponent position
+    const oppGroundY = getTerrainYAt(opp.x);
+    if (dist < opp.radius + 30 || Math.abs(dy) < 20) {
         opp.alive = false;
         gameOver = true;
         players[currentPlayer].wins += 1;
@@ -493,17 +636,15 @@ function getCanvasCoords(e) {
 // ---- animated movement ----
 function animateMove(shooter, targetX) {
     const fromX = shooter.x;
-    moveAnim = { shooter, fromX, toX: targetX, startedAt: performance.now() };
-
-    const duration = Math.abs(targetX - fromX) * 8; // ms, roughly 8ms per pixel
-    const startTime = performance.now();
+    const targetY = getTerrainYAt(targetX) - 20;
+    moveAnim = { shooter, fromX, toX: targetX, startedAt: performance.now(), duration: Math.abs(targetX - fromX) * 8 };
 
     function tick() {
-        const elapsed = performance.now() - startTime;
-        const t = Math.min(elapsed / duration, 1); // 0 → 1
-        // ease-out quad for smooth deceleration
+        const elapsed = performance.now() - moveAnim.startedAt;
+        const t = Math.min(elapsed / moveAnim.duration, 1);
         const eased = t < 1 ? 1 - Math.pow(1 - t, 2) : 1;
         shooter.x = fromX + (targetX - fromX) * eased;
+        shooter.y = getTerrainYAt(shooter.x) - 20;
         draw();
         if (t < 1) {
             requestAnimationFrame(tick);
@@ -540,24 +681,23 @@ canvas.addEventListener('pointercancel', () => {
 
 // ---- shared handlers ----
 function pointerDownHandler(e) {
-    if (gameOver || turnLock) return;
+    if (gameOver || turnLock || moveAnim) return;
     const shooter = players[currentPlayer];
-    if (!shooter.alive) {
-        statusMsg.innerText = `⛔ ${currentPlayer.toUpperCase()} is dead!`;
-        return;
-    }
+    if (!shooter.alive) return;
 
     const pos = getCanvasCoords(e);
     const now = Date.now();
 
     // ---- double-click / double-tap detection for movement ----
-    const isDoubleClick = (now - lastClickTime < DOUBLE_CLICK_MS);
-    lastClickTime = now;
+    const prevClick = lastMoveClickTime !== null && !isNaN(lastMoveClickTime);
+    const isDoubleClick = prevClick && (now - lastMoveClickTime < DOUBLE_CLICK_MS);
+    lastMoveClickTime = now;
 
-    // Check if click is near the ground (bottom 20% of screen)
-    const nearGround = pos.y > H * (1 - GROUND_ZONE);
+    // Check if click is near the terrain surface at this X
+    const terrainSurfaceY = getTerrainYAt(pos.x);
+    const nearGround = pos.y > terrainSurfaceY - 40 && pos.y < terrainSurfaceY + 40;
 
-    if (isDoubleClick && nearGround && !moveAnim) {
+    if (isDoubleClick && nearGround) {
         // Move the current player
         let newX = pos.x;
         if (currentPlayer === 'p1') {
@@ -599,8 +739,6 @@ function pointerMoveHandler(e) {
     aimAngle = Math.atan2(dy, dx);
 
     // --- Power: swipe away from opponent direction ---
-    // P1 (left): swipe right to increase, left to decrease
-    // P2 (right): swipe left to increase, right to decrease
     const dir = shooter.x < 400 ? 1 : -1;
     const deltaX = (pos.x - aimPointerX) * dir;
     const effectiveDist = Math.max(0, deltaX - 9);
