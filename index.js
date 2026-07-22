@@ -50,6 +50,17 @@ let aimPower = 0;
 let aimPointerX = 0;
 let aimPointerY = 0;
 
+// ---- movement state ----
+let lastClickTime = 0;
+let lastClickX = 0;
+let lastClickY = 0;
+const DOUBLE_CLICK_MS = 400;
+const GROUND_ZONE = 0.2;          // bottom 20% of screen height
+const P1_MAX_X = W * 0.45;        // P1 can move within left 45%
+const P2_MIN_X = W * 0.55;        // P2 can move within right 45%
+const MOVE_SPEED = 3;             // pixels per frame during animation
+let moveAnim = null;              // { shooter, fromX, toX, callback }
+
 let currentPlayer = 'p1';          // 'p1' or 'p2'
 let gameOver = false;
 let turnLock = false;             // block while projectile flies
@@ -77,7 +88,7 @@ function resetRound() {
 
     currentPlayer = 'p1';
     updateTurnUI();
-    statusMsg.innerText = '👆 tap to aim, swipe for power';
+    statusMsg.innerText = '👆 tap to aim, swipe for power, double tap to move';
     draw();
 }
 
@@ -464,7 +475,7 @@ function endTurn() {
     }
     updateTurnUI();
     turnLock = false;
-    statusMsg.innerText = `👆 tap to aim, swipe for power`;
+    statusMsg.innerText = `👆 tap to aim, swipe for power, double tap to move`;
     draw();
 }
 
@@ -477,6 +488,32 @@ function getCanvasCoords(e) {
         x: (e.clientX - rect.left) * scaleX,
         y: (e.clientY - rect.top) * scaleY
     };
+}
+
+// ---- animated movement ----
+function animateMove(shooter, targetX) {
+    const fromX = shooter.x;
+    moveAnim = { shooter, fromX, toX: targetX, startedAt: performance.now() };
+
+    const duration = Math.abs(targetX - fromX) * 8; // ms, roughly 8ms per pixel
+    const startTime = performance.now();
+
+    function tick() {
+        const elapsed = performance.now() - startTime;
+        const t = Math.min(elapsed / duration, 1); // 0 → 1
+        // ease-out quad for smooth deceleration
+        const eased = t < 1 ? 1 - Math.pow(1 - t, 2) : 1;
+        shooter.x = fromX + (targetX - fromX) * eased;
+        draw();
+        if (t < 1) {
+            requestAnimationFrame(tick);
+        } else {
+            moveAnim = null;
+            statusMsg.innerText = `🎯 ${currentPlayer.toUpperCase()} turn`;
+            draw();
+        }
+    }
+    tick();
 }
 
 // ---- pointer events (works for both touch and mouse) ----
@@ -529,6 +566,29 @@ function pointerDownHandler(e) {
     }
 
     const pos = getCanvasCoords(e);
+    const now = Date.now();
+
+    // ---- double-click / double-tap detection for movement ----
+    const isDoubleClick = (now - lastClickTime < DOUBLE_CLICK_MS);
+    lastClickTime = now;
+
+    // Check if click is near the ground (bottom 20% of screen)
+    const nearGround = pos.y > H * (1 - GROUND_ZONE);
+
+    if (isDoubleClick && nearGround && !moveAnim) {
+        // Move the current player
+        let newX = pos.x;
+        if (currentPlayer === 'p1') {
+            newX = Math.max(30, Math.min(P1_MAX_X, newX));
+        } else {
+            newX = Math.max(P2_MIN_X, Math.min(W - 30, newX));
+        }
+        statusMsg.innerText = `🚶 ${currentPlayer.toUpperCase()} moving`;
+        animateMove(shooter, newX);
+        return;
+    }
+
+    // ---- normal aim ----
     const dx = pos.x - shooter.x;
     const dy = pos.y - shooter.y;
     const dist = Math.hypot(dx, dy);
