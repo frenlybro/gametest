@@ -556,9 +556,12 @@ function pointerMoveHandler(e) {
     const dy = pos.y - shooter.y;
     aimAngle = Math.atan2(dy, dx);
 
-    // --- Power: horizontal distance from initial tap point ---
-    const hDist = Math.abs(pos.x - aimPointerX);
-    const effectiveDist = Math.max(0, hDist - 9);
+    // --- Power: swipe away from opponent direction ---
+    // P1 (left): swipe right to increase, left to decrease
+    // P2 (right): swipe left to increase, right to decrease
+    const dir = shooter.x < 400 ? 1 : -1;
+    const deltaX = (pos.x - aimPointerX) * dir;
+    const effectiveDist = Math.max(0, deltaX - 9);
     aimPower = Math.min(MAX_POWER, effectiveDist / 17);
 
     draw();
