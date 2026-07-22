@@ -4,10 +4,10 @@
   "description": "A two-player Worms-style artillery duel game",
   "start_url": "./index.html",
   "scope": "./",
-  "display": "standalone",
+  "display": "fullscreen",
   "orientation": "landscape",
   "background_color": "#1a2a1f",
-  "theme_color": "#3b5e3b",
+  "theme_color": "#000000",
   "categories": ["games", "entertainment"],
   "icons": [
     {
