@@ -1,0 +1,26 @@
+{
+  "name": "Worms · two-player duel",
+  "short_name": "Worms Duel",
+  "description": "A two-player Worms-style artillery duel game",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#1a2a1f",
+  "theme_color": "#3b5e3b",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
