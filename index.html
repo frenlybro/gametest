@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Worms · two-player duel</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            background: #1a2a1f;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+        .game-container {
+            background: #3b5e3b;
+            padding: 2rem 2rem 1.8rem;
+            border-radius: 3rem 3rem 2rem 2rem;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.6), inset 0 2px 4px #7faa7f;
+            border-bottom: 6px solid #2a452a;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 28px;
+            background: #9ac7c7;
+            background-image: radial-gradient(circle at 10% 20%, #b5e0e0 2%, #7fb3b3 80%);
+            box-shadow: inset 0 -8px 0 #5f7e7e, 0 10px 18px rgba(0,0,0,0.4);
+            cursor: crosshair;
+            width: 800px;
+            height: 400px;
+        }
+        .ui-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding: 0 6px;
+            color: #f0f7d8;
+            text-shadow: 2px 2px 0 #1f3a1f;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+        .player-badge {
+            background: #2c472c;
+            padding: 0.6rem 1.6rem;
+            border-radius: 40px;
+            box-shadow: inset 0 -3px 0 #142214, 0 4px 8px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .player-badge span {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid #d4e6b0;
+        }
+        .p1-color { background: #db3a3a; }
+        .p2-color { background: #3a7bd5; }
+        .turn-indicator {
+            background: #2c3e2c;
+            padding: 0.4rem 1.8rem;
+            border-radius: 40px;
+            font-size: 1.4rem;
+            letter-spacing: 1px;
+            border: 1px solid #b3d9a0;
+            box-shadow: inset 0 -2px 0 #1d2e1d;
+        }
+        .btn-reset {
+            background: #dabf7a;
+            border: none;
+            font-weight: bold;
+            font-size: 1.2rem;
+            padding: 0.5rem 1.8rem;
+            border-radius: 40px;
+            color: #252d1a;
+            box-shadow: 0 5px 0 #8f7a4a, 0 4px 12px black;
+            cursor: pointer;
+            transition: 0.08s linear;
+            letter-spacing: 0.5px;
+        }
+        .btn-reset:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #7a663b;
+        }
+        .btn-reset:hover {
+            background: #e8cf88;
+        }
+        .status-msg {
+            background: #1f2f1f;
+            padding: 0.25rem 1.8rem;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            border: 1px solid #6f946f;
+        }
+        @media (max-width: 850px) {
+            canvas { width: 100%; height: auto; aspect-ratio: 2/1; }
+            .game-container { padding: 1rem; }
+            .ui-panel { flex-wrap: wrap; gap: 10px; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+    <div class="ui-panel">
+        <div class="player-badge">
+            <span class="p1-color"></span> Player 1
+        </div>
+        <div class="turn-indicator" id="turnIndicator">▶ P1</div>
+        <div class="status-msg" id="statusMsg">⚔️ aim & fire</div>
+        <button class="btn-reset" id="resetBtn">↺ new round</button>
+        <div class="player-badge">
+            <span class="p2-color"></span> Player 2
+        </div>
+    </div>
+</div>
+<script src="index.js"></script>
+</body>
+</html>
