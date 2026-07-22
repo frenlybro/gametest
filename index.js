@@ -550,18 +550,15 @@ function pointerMoveHandler(e) {
     if (!shooter || !shooter.alive) return;
 
     const pos = getCanvasCoords(e);
-    aimPointerX = pos.x;
-    aimPointerY = pos.y;
 
-    // --- Angle: up/down relative to shooter (live) ---
+    // --- Angle: directly follows the finger/mouse from shooter ---
+    const dx = pos.x - shooter.x;
     const dy = pos.y - shooter.y;
-    // Keep the horizontal direction (left/right) based on which side of shooter
-    const dir = shooter.x < pos.x ? 1 : -1;
-    aimAngle = Math.atan2(dy, dir * 10);
+    aimAngle = Math.atan2(dy, dx);
 
-    // --- Power: horizontal distance from tap-down point ---
-    const dx = Math.abs(pos.x - aimPointerX); // horizontal distance from initial tap
-    const effectiveDist = Math.max(0, dx - 9);
+    // --- Power: horizontal distance from initial tap point ---
+    const hDist = Math.abs(pos.x - aimPointerX);
+    const effectiveDist = Math.max(0, hDist - 9);
     aimPower = Math.min(MAX_POWER, effectiveDist / 17);
 
     draw();
