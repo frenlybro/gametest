@@ -514,13 +514,14 @@ canvas.addEventListener('pointermove', (e) => {
     aimPointerY = pos.y;
 
     // Power based on distance from shooter to current pointer, capped
+    // Higher denominator = less sensitive (need more finger movement)
     const dx = pos.x - shooter.x;
     const dy = pos.y - shooter.y;
     const dist = Math.hypot(dx, dy);
-    aimPower = Math.min(MAX_POWER, dist / 28);
 
-    // Power can't be negative
-    if (aimPower < 0) aimPower = 0;
+    // Dead zone: first 30px of movement give no power (prevents accidental small flicks)
+    const effectiveDist = Math.max(0, dist - 30);
+    aimPower = Math.min(MAX_POWER, effectiveDist / 55);
 
     draw();
 });
