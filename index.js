@@ -532,8 +532,9 @@ canvas.addEventListener('pointerup', (e) => {
 
 canvas.addEventListener('pointercancel', () => {
     if (aiming) {
-        aiming = false;
-        draw();
+        // Mobile often fires pointercancel instead of pointerup.
+        // Fire the shot with whatever power/angle was set.
+        fireProjectile();
     }
 });
 
