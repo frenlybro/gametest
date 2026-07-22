@@ -111,20 +111,16 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: max(0.8px, 0.1vmin);
-            padding-top: max(0.8px, 0.1vmin, env(safe-area-inset-top));
-            padding-bottom: max(0.8px, 0.1vmin, env(safe-area-inset-bottom));
-            padding-left: max(0.8px, 0.1vmin, env(safe-area-inset-left));
-            padding-right: max(0.8px, 0.1vmin, env(safe-area-inset-right));
+            padding: 10px;
             overflow: hidden;
         }
         .game-container {
             background: #3b5e3b;
-            padding: clamp(1px, 0.2vmin, 0.2rem) clamp(1px, 0.2vmin, 0.2rem) clamp(0.8px, 0.15vmin, 0.18rem);
-            border-radius: clamp(0.1rem, 0.3vmin, 0.3rem);
+            padding: clamp(10px, 2vmin, 2rem);
+            border-radius: clamp(1rem, 3vmin, 3rem);
             box-shadow: 0 20px 30px rgba(0,0,0,0.6), inset 0 2px 4px #7faa7f;
             border-bottom: clamp(2px, 0.5vmin, 6px) solid #2a452a;
-            max-width: min(96vw, calc(100dvh * 2 - 4rem));
+            max-width: 100vw;
             max-height: 100%;
             width: 100%;
         }
