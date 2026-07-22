@@ -540,7 +540,7 @@ function pointerDownHandler(e) {
     aimPointerX = pos.x;
     aimPointerY = pos.y;
 
-    statusMsg.innerText = `⬆️ swipe to set power, release to fire`;
+    statusMsg.innerText = `↔️ swipe left/right for power, ↑↓ for angle`;
     draw();
 }
 
@@ -553,15 +553,16 @@ function pointerMoveHandler(e) {
     aimPointerX = pos.x;
     aimPointerY = pos.y;
 
-    // Power based on distance from shooter to current pointer, capped
-    const dx = pos.x - shooter.x;
+    // --- Angle: up/down relative to shooter (live) ---
     const dy = pos.y - shooter.y;
-    const dist = Math.hypot(dx, dy);
+    // Keep the horizontal direction (left/right) based on which side of shooter
+    const dir = shooter.x < pos.x ? 1 : -1;
+    aimAngle = Math.atan2(dy, dir * 10);
 
-    // Dead zone: first 9px of movement give no power
-    const effectiveDist = Math.max(0, dist - 9);
+    // --- Power: horizontal distance from tap-down point ---
+    const dx = Math.abs(pos.x - aimPointerX); // horizontal distance from initial tap
+    const effectiveDist = Math.max(0, dx - 9);
     aimPower = Math.min(MAX_POWER, effectiveDist / 17);
-    // ^ 50% more sensitive than previous (25 / 1.5 ≈ 17)
 
     draw();
 }
