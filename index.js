@@ -308,7 +308,7 @@ function loadPlayerImage() {
     playerImg = new Image();
     playerImg.onload = () => { playerImgLoaded = true; draw(); };
     playerImg.onerror = () => { playerImgLoaded = false; };
-    playerImg.src = 'backgrounds/player1.png';
+    playerImg.src = 'backgrounds/player1.png?v=1.0.1';
 }
 
 function loadRandomBackground() {
