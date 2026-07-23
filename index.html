@@ -37,7 +37,7 @@
             font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
         }
 
-        /* ── rotate-device overlay (portrait) ── */
+        /* ── rotate-device overlay ── */
         #rotateOverlay {
             display: none;
             position: fixed;
@@ -188,15 +188,6 @@
             .player-badge span { width: 8px; height: 8px; border-width: 1px; }
         }
     </style>
-
-    <!-- Importmap for modern @telegram-apps/sdk (used by index.js) -->
-    <script type="importmap">
-    {
-        "imports": {
-            "@telegram-apps/sdk": "https://esm.sh/@telegram-apps/sdk@3.11.8"
-        }
-    }
-    </script>
 </head>
 <body>
     <!-- Landscape-only overlay -->
@@ -221,6 +212,23 @@
             </div>
         </div>
     </div>
+
+    <script src="index.js?v=1.0.23"></script>
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('SW registered:', reg.scope))
+                .catch(err => console.error('SW registration failed:', err));
+        }
+
+        // Lock orientation if API available (modern mobile browsers)
+        if ('orientation' in screen && screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(() => {
+                console.log('Orientation lock not supported');
+            });
+        }
+    </script>
 
     <!-- Legacy Telegram Mini App library for fullscreen + orientation -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -265,8 +273,5 @@
             });
         }
     </script>
-
-    <!-- Game module (uses modern @telegram-apps/sdk for the game logic) -->
-    <script type="module" src="index.js?v=1.0.27"></script>
 </body>
 </html>
