@@ -300,6 +300,10 @@ let bgImageLoaded = false;
 let playerImg = null;
 let playerImgLoaded = false;
 
+// ---- player2 image (blue player) ----
+let player2Img = null;
+let player2ImgLoaded = false;
+
 // ---- dirt terrain texture ----
 let dirtImg = null;
 let dirtImgLoaded = false;
@@ -336,6 +340,14 @@ function loadPlayerImage() {
     playerImg.onload = () => { playerImgLoaded = true; draw(); };
     playerImg.onerror = () => { playerImgLoaded = false; };
     playerImg.src = 'backgrounds/player1.png?v=1.0.1';
+}
+
+function loadPlayer2Image() {
+    player2ImgLoaded = false;
+    player2Img = new Image();
+    player2Img.onload = () => { player2ImgLoaded = true; draw(); };
+    player2Img.onerror = () => { player2ImgLoaded = false; };
+    player2Img.src = 'backgrounds/player2.png?v=1.0.1';
 }
 
 function loadRandomBackground() {
@@ -388,24 +400,32 @@ function draw() {
         if (!p.alive) continue;
         const dir = id === 'p1' ? 1 : -1;
 
-        // Use image for red player (p1), circle for blue player (p2)
-        if (id === 'p1' && playerImgLoaded && playerImg.complete && playerImg.naturalWidth > 0) {
+        const img = id === 'p1' ? playerImg : player2Img;
+        const imgLoaded = id === 'p1' ? playerImgLoaded : player2ImgLoaded;
+
+        // Use image for both players
+        if (imgLoaded && img.complete && img.naturalWidth > 0) {
             // crisp image rendering: no shadow, no smoothing
             ctx.shadowColor = 'transparent';
             ctx.shadowBlur = 0;
             ctx.shadowOffsetY = 0;
             ctx.imageSmoothingEnabled = false;
-            // determine facing direction: during movement follow direction, else face right
-            let facingRight = p.facingRight !== undefined ? p.facingRight : true;
+            // determine facing direction
+            // Both players face opponent by default.
+            // player1.png naturally faces right, player2.png naturally faces left.
+            // facingRight=true = draw unflipped, facingRight=false = mirror horizontally.
+            let facingRight = p.facingRight !== undefined ? p.facingRight : (id === 'p1');
             if (moveAnim && moveAnim.shooter === p) {
-                facingRight = moveAnim.toX >= moveAnim.fromX;
+                // Face movement direction: P1 moving right = unflipped, P2 moving right = flipped (mirrored)
+                const movingRight = moveAnim.toX >= moveAnim.fromX;
+                facingRight = (id === 'p1') ? movingRight : !movingRight;
                 p.facingRight = facingRight;
             } else {
                 p.facingRight = true;
             }
             // draw image centered at player position, maintaining aspect ratio
             const maxSize = p.radius * 2;
-            const imgAspect = playerImg.naturalWidth / playerImg.naturalHeight;
+            const imgAspect = img.naturalWidth / img.naturalHeight;
             let drawW, drawH;
             if (imgAspect > 1) {
                 drawW = maxSize;
@@ -420,10 +440,10 @@ function draw() {
                 ctx.save();
                 ctx.translate(p.x, p.y - drawH / 2);
                 ctx.scale(-1, 1);
-                ctx.drawImage(playerImg, -drawW / 2, 0, drawW, drawH);
+                ctx.drawImage(img, -drawW / 2, 0, drawW, drawH);
                 ctx.restore();
             } else {
-                ctx.drawImage(playerImg, offX, offY, drawW, drawH);
+                ctx.drawImage(img, offX, offY, drawW, drawH);
             }
             // weapon (small cannon)
             ctx.shadowBlur = 0;
@@ -439,7 +459,7 @@ function draw() {
             ctx.arc(p.x + dir * 24, p.y - 10, 5, 0, Math.PI * 2);
             ctx.fill();
         } else {
-            // fallback / p2: circle body
+            // fallback: circle body
             ctx.shadowColor = 'rgba(0,0,0,0.3)';
             ctx.shadowBlur = 10;
             ctx.shadowOffsetY = 4;
@@ -913,6 +933,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 // ---- init ----
 resizeCanvas();  // initial sizing after all variables are declared
 loadPlayerImage();
+loadPlayer2Image();
 loadDirtImage();
 resetRound();
 
