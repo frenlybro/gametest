@@ -116,7 +116,8 @@ const players = {
         color: '#db3a3a',
         shadow: '#8f1f1f',
         alive: true,
-        wins: 0
+        wins: 0,
+        facingRight: true
     },
     p2: {
         x: 700, y: GROUND_Y - 20,
@@ -367,6 +368,14 @@ function draw() {
             ctx.shadowBlur = 0;
             ctx.shadowOffsetY = 0;
             ctx.imageSmoothingEnabled = false;
+            // determine facing direction: during movement follow direction, else face right
+            let facingRight = p.facingRight !== undefined ? p.facingRight : true;
+            if (moveAnim && moveAnim.shooter === p) {
+                facingRight = moveAnim.toX >= moveAnim.fromX;
+                p.facingRight = facingRight;
+            } else {
+                p.facingRight = true;
+            }
             // draw image centered at player position, maintaining aspect ratio
             const maxSize = p.radius * 2;
             const imgAspect = playerImg.naturalWidth / playerImg.naturalHeight;
@@ -380,7 +389,15 @@ function draw() {
             }
             const offX = p.x - drawW / 2;
             const offY = p.y - drawH / 2;
-            ctx.drawImage(playerImg, offX, offY, drawW, drawH);
+            if (!facingRight) {
+                ctx.save();
+                ctx.translate(p.x, p.y - drawH / 2);
+                ctx.scale(-1, 1);
+                ctx.drawImage(playerImg, -drawW / 2, 0, drawW, drawH);
+                ctx.restore();
+            } else {
+                ctx.drawImage(playerImg, offX, offY, drawW, drawH);
+            }
             // weapon (small cannon)
             ctx.shadowBlur = 0;
             ctx.shadowOffsetY = 0;
@@ -702,7 +719,7 @@ function checkHitGround() {
     const dist = Math.hypot(dx, dy);
     // use approximate ground level at opponent position
     const oppGroundY = getTerrainYAt(opp.x);
-    if (dist < opp.radius + 30 || Math.abs(dy) < 20) {
+    if (dist < opp.radius + 15) {
         opp.alive = false;
         gameOver = true;
         players[currentPlayer].wins += 1;
