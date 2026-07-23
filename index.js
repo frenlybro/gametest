@@ -4,15 +4,27 @@ const ctx = canvas.getContext('2d');
 const turnIndicator = document.getElementById('turnIndicator');
 const statusMsg = document.getElementById('statusMsg');
 
-// ---- dimensions ----
+// ---- dimensions (logical game world) ----
 const W = 800, H = 400;
-
-// sharp rendering: upscale canvas internal resolution
-const RENDER_SCALE = 2;
-canvas.width = W * RENDER_SCALE;
-canvas.height = H * RENDER_SCALE;
-ctx.scale(RENDER_SCALE, RENDER_SCALE);
 const GROUND_Y = 340;        // baseline ground level (used for player start)
+
+// ---- fullscreen canvas sizing ----
+function resizeCanvas() {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    // Scale to fill screen while maintaining 2:1 aspect ratio
+    const scale = Math.max(vw / W, vh / H);
+    const cw = Math.ceil(W * scale);
+    const ch = Math.ceil(H * scale);
+    canvas.width = cw;
+    canvas.height = ch;
+    // Reset transform and apply uniform scale so game coordinates (0-800,0-400) map to canvas
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const displayScale = Math.min(cw / W, ch / H);
+    ctx.scale(displayScale, displayScale);
+    draw();
+}
+window.addEventListener('resize', resizeCanvas);
 const GRAVITY = 0.25;
 const MAX_POWER = 22;
 const POWER_BAR_WIDTH = 140;
@@ -23,17 +35,16 @@ const POWER_BAR_Y = 20;
 // ---- terrain types ----
 const TERRAIN_TYPES = ['rust', 'crimson', 'ember'];
 const TERRAIN_COLORS = {
-    rust:    { base: '#a0522d', top: '#cd853f', blade: '#8b4513', rock: '#6b3a2a', shadow: '#5c2a1a' },
-    crimson: { base: '#b22222', top: '#dc3535', blade: '#8b1a1a', rock: '#6b2a2a', shadow: '#4a1a1a' },
-    ember:   { base: '#d2691e', top: '#e8832a', blade: '#a0522d', rock: '#7a4a3a', shadow: '#5c3a2a' }
+    rust:    { base: '#a0522d', top: '#cd853f', blade: '#8b4513', shadow: '#5c2a1a' },
+    crimson: { base: '#b22222', top: '#dc3535', blade: '#8b1a1a', shadow: '#4a1a1a' },
+    ember:   { base: '#d2691e', top: '#e8832a', blade: '#a0522d', shadow: '#5c3a2a' }
 };
 
 // ---- terrain state ----
 let terrain = {
-    type: 'grass',
-    colors: TERRAIN_COLORS.grass,
-    heights: [],   // height[] per x column, 0..0.8 (0 = flat ground, 0.8 = 80% up from bottom)
-    rocks: []      // {x, y, r}
+    type: 'rust',
+    colors: TERRAIN_COLORS.rust,
+    heights: []   // height[] per x column, 0..0.8 (0 = flat ground, 0.8 = 80% up from bottom)
 };
 
 // ---- generate terrain ----
@@ -41,7 +52,6 @@ function generateTerrain(type) {
     terrain.type = type;
     terrain.colors = TERRAIN_COLORS[type];
     terrain.heights = [];
-    terrain.rocks = [];
 
     // Seed based on type + round for consistent randomness within a type
     const seed = (type.charCodeAt(0) * 1000 + Math.floor(Math.random() * 9999));
@@ -75,19 +85,6 @@ function generateTerrain(type) {
         for (let x = 1; x < W - 1; x++) {
             terrain.heights[x] = (terrain.heights[x-1] + terrain.heights[x] + terrain.heights[x+1]) / 3;
         }
-    }
-
-    // Place rocks (10-25 rocks)
-    const numRocks = 10 + Math.floor(rng() * 15);
-    for (let i = 0; i < numRocks; i++) {
-        const rx = rng() * (W - 40) + 20;
-        const yi = Math.floor(rx);
-        const rh = terrain.heights[Math.min(Math.max(yi, 0), W-1)];
-        const ry = getTerrainYAt(rx);
-        const rr = 3 + rng() * 12;
-        // don't place rocks too close to players
-        if ((rx < 160 && rx > 60) || (rx > 640 && rx < 740)) continue;
-        terrain.rocks.push({ x: rx, y: ry, r: rr });
     }
 }
 
@@ -219,13 +216,26 @@ function drawTerrain() {
     ctx.lineTo(W, H);
     ctx.closePath();
 
-    // gradient fill from top of terrain to bottom
-    const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, c.top);
-    grad.addColorStop(0.5, c.base);
-    grad.addColorStop(1, c.shadow);
-    ctx.fillStyle = grad;
-    ctx.fill();
+    // fill with repeating dirt.jpg texture (on all terrain types)
+    if (dirtImgLoaded && dirtPattern) {
+        ctx.fillStyle = dirtPattern;
+        ctx.fill();
+        // subtle gradient overlay for depth
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, 'rgba(255,255,255,0.15)');
+        grad.addColorStop(0.5, 'rgba(0,0,0,0.08)');
+        grad.addColorStop(1, 'rgba(0,0,0,0.15)');
+        ctx.fillStyle = grad;
+        ctx.fill();
+    } else {
+        // fallback gradient
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, c.top);
+        grad.addColorStop(0.5, c.base);
+        grad.addColorStop(1, c.shadow);
+        ctx.fillStyle = grad;
+        ctx.fill();
+    }
 
     // subtle surface texture
     ctx.strokeStyle = c.blade;
@@ -239,19 +249,6 @@ function drawTerrain() {
         ctx.stroke();
     }
     ctx.globalAlpha = 1.0;
-
-    // rocks
-    for (const rock of terrain.rocks) {
-        ctx.fillStyle = c.rock;
-        ctx.shadowColor = 'rgba(0,0,0,0.3)';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetY = 2;
-        ctx.beginPath();
-        ctx.ellipse(rock.x, rock.y, rock.r, rock.r * 0.6, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetY = 0;
-    }
 
     // ---- terrain-type specific texture ----
     if (terrain.type === 'rust') {
@@ -302,6 +299,36 @@ let bgImageLoaded = false;
 // ---- player image (red player) ----
 let playerImg = null;
 let playerImgLoaded = false;
+
+// ---- dirt terrain texture ----
+let dirtImg = null;
+let dirtImgLoaded = false;
+let dirtPattern = null;
+const DIRT_TILE_SIZE = 100;
+
+function loadDirtImage() {
+    dirtImgLoaded = false;
+    dirtImg = new Image();
+    dirtImg.onload = () => {
+        // Create a small repeating tile from the dirt image so it tiles
+        // across the whole terrain rather than showing one giant image.
+        const tileW = DIRT_TILE_SIZE;
+        const tileH = Math.round(tileW * dirtImg.naturalHeight / dirtImg.naturalWidth);
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = tileW;
+        offCanvas.height = tileH;
+        const offCtx = offCanvas.getContext('2d');
+        offCtx.drawImage(dirtImg, 0, 0, tileW, tileH);
+        dirtPattern = ctx.createPattern(offCanvas, 'repeat');
+        dirtImgLoaded = true;
+        draw();
+    };
+    dirtImg.onerror = () => { dirtImgLoaded = false; };
+    // Randomly pick between dirt.jpg and dirt2.jpg for terrain texture
+    const dirtFiles = ['dirt.jpg', 'dirt2.jpg'];
+    const pick = dirtFiles[Math.floor(Math.random() * dirtFiles.length)];
+    dirtImg.src = `backgrounds/${pick}?v=1.0.1`;
+}
 
 function loadPlayerImage() {
     playerImgLoaded = false;
@@ -884,7 +911,9 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 });
 
 // ---- init ----
+resizeCanvas();  // initial sizing after all variables are declared
 loadPlayerImage();
+loadDirtImage();
 resetRound();
 
 // ---- extra: keyboard R for reset ----
@@ -895,5 +924,3 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
-// ---- handle window resize / redraw ----
-window.addEventListener('resize', () => { draw(); });
