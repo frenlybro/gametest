@@ -53,64 +53,63 @@ function generateTerrain(type) {
     terrain.colors = TERRAIN_COLORS[type];
     terrain.heights = [];
 
-    // Seed based on type + round for consistent randomness within a type
+    // Seed based on type for consistent randomness within a type
     const seed = (type.charCodeAt(0) * 1000 + Math.floor(Math.random() * 9999));
     const rng = mulberry32(seed);
 
-    // Generate terrain: never flat, always rolling hills 25-75% height
-    const maxAmplitude = 0.25 + Math.pow(rng(), 0.4) * 0.50; // min 25%, max 75%
-    // Use harmonic frequencies for smooth, organic rolling curves
-    const baseFreq = 0.002 + rng() * 0.0015;
-    const offset = rng() * Math.PI * 2;
+    // === Phase 1: constant curves (sine wave base) ===
+    // Base oscillates low — mostly 5–15%, occasionally up to ~20%
+    const baseFreq1 = 0.0015 + rng() * 0.0012;
+    const baseFreq2 = 0.0030 + rng() * 0.0020;
+    const offset1 = rng() * Math.PI * 2;
+    const offset2 = rng() * Math.PI * 2;
+    const baseAmp = 0.04 + rng() * 0.04; // how much the base oscillates (4–8%)
 
+    // === Phase 2: random hills capped at 60% ===
+    // Place 2–5 hills at random positions across the width
+    const hillCount = 2 + Math.floor(rng() * 4);
+    const hills = [];
+    for (let i = 0; i < hillCount; i++) {
+        // Hill center — spaced out somewhat evenly with randomness
+        const cx = (W / hillCount) * (i + 0.5) + (rng() - 0.5) * (W / hillCount) * 0.6;
+        const peakHeight = 0.40 + rng() * 0.20; // 40%–60% height
+        const halfWidth = 40 + rng() * 80;       // width of the hill (40–120 px)
+        hills.push({ cx, peakHeight, halfWidth });
+    }
+
+    // Build terrain
     for (let x = 0; x < W; x++) {
-        let h = 0.25; // base so it's never flat
+        // Low baseline — most terrain at 5–10%
+        let h = 0.05 + rng() * 0.05; // baseline 5–10%
+        h += Math.sin(x * baseFreq1 + offset1) * baseAmp;
+        h += Math.sin(x * baseFreq2 + offset2) * baseAmp * 0.5;
 
-        // Harmonic sine waves for smooth, curvy terrain
-        h += Math.sin(x * baseFreq + offset) * maxAmplitude * 0.60;
-        h += Math.sin(x * baseFreq * 2.0 + offset * 1.5) * maxAmplitude * 0.45;
-        h += Math.sin(x * baseFreq * 3.0 + offset * 2.2) * maxAmplitude * 0.35;
-        h += Math.sin(x * baseFreq * 4.0 + offset * 0.8) * maxAmplitude * 0.25;
-        h += Math.sin(x * baseFreq * 5.0 + offset * 1.6) * maxAmplitude * 0.18;
-        h += Math.sin(x * baseFreq * 6.0 + offset * 3.4) * maxAmplitude * 0.12;
+        // Add big hills using gaussian bumps
+        for (const hill of hills) {
+            const dist = Math.abs(x - hill.cx);
+            const gauss = Math.exp(-(dist * dist) / (2 * hill.halfWidth * hill.halfWidth));
+            h += gauss * (hill.peakHeight - h);
+        }
 
-        // clamp to 0.2..0.75 (never flat, never too extreme)
-        h = Math.max(0.2, Math.min(0.75, h));
+        // Minor fine detail (small bumps)
+        h += Math.sin(x * 0.025 + rng()) * 0.02;
+        h += Math.sin(x * 0.045 + rng() * 2) * 0.015;
+
+        // Clamp: valleys down to 3%, peaks capped at 60%
+        h = Math.max(0.03, Math.min(0.60, h));
         terrain.heights.push(h);
     }
 
-    // Smooth for roundness — enough passes for smooth curves, not so many it flattens
-    for (let pass = 0; pass < 6; pass++) {
+    // Light smoothing (just 2 passes) so it's organic but keeps shape
+    for (let pass = 0; pass < 2; pass++) {
         for (let x = 1; x < W - 1; x++) {
             terrain.heights[x] = (terrain.heights[x-1] + terrain.heights[x] + terrain.heights[x+1]) / 3;
         }
     }
 
-    // Post-process: ensure no flat run longer than 20px (10 samples at 2px step)
-    // Flat = adjacent heights differ by less than 0.004
-    const FLAT_RUN_LIMIT = 10;
-    for (let start = 0; start < W; ) {
-        let end = start;
-        while (end < W - 1 && Math.abs(terrain.heights[end] - terrain.heights[end + 1]) < 0.004) {
-            end++;
-        }
-        const runLen = end - start + 1;
-        if (runLen > FLAT_RUN_LIMIT) {
-            // Perturb the middle of the flat run to create a gentle bump
-            const mid = Math.floor((start + end) / 2);
-            const bumpWidth = Math.min(6, runLen / 3);
-            for (let i = Math.max(0, mid - bumpWidth); i <= Math.min(W - 1, mid + bumpWidth); i++) {
-                const dist = Math.abs(i - mid) / bumpWidth;
-                const bump = 0.02 + rng() * 0.03 * (1 - dist);
-                terrain.heights[i] += bump * (1 - dist);
-            }
-        }
-        start = end + 1;
-    }
-
-    // Re-clamp after perturbation
+    // Re-clamp after smoothing
     for (let x = 0; x < W; x++) {
-        terrain.heights[x] = Math.max(0.2, Math.min(0.75, terrain.heights[x]));
+        terrain.heights[x] = Math.max(0.03, Math.min(0.60, terrain.heights[x]));
     }
 }
 
