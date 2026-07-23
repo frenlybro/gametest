@@ -867,8 +867,6 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 });
 
 // ---- init ----
-// prefer crisp pixel-art rendering for small sprites
-ctx.imageSmoothingEnabled = false;
 loadPlayerImage();
 resetRound();
 
