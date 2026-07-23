@@ -48,25 +48,24 @@ function generateTerrain(type) {
     const ridgeOffset = rng() * Math.PI * 2;
 
     for (let x = 0; x < W; x++) {
-        let h = 0.15; // base height so it's never flat
+        let h = 0.15; // base so it's never flat
 
-        // main ridge — broad hill shape
-        const ridge = Math.sin(x * ridgeFreq + ridgeOffset) * maxAmplitude;
-        h += ridge;
-
-        // second blended sine for organic shape
-        h += Math.sin(x * ridgeFreq * 2.3 + ridgeOffset * 1.7) * maxAmplitude * 0.25;
-
-        // rolling texture — always visible, prevents any flat stretches
-        h += Math.sin(x * 0.015 + rng() * 6.28) * maxAmplitude * 0.25;
+        // 5-7 overlapping sine waves for many curves
+        h += Math.sin(x * ridgeFreq + ridgeOffset) * maxAmplitude * 0.55;
+        h += Math.sin(x * ridgeFreq * 1.8 + ridgeOffset * 1.4) * maxAmplitude * 0.45;
+        h += Math.sin(x * ridgeFreq * 2.6 + ridgeOffset * 2.1) * maxAmplitude * 0.35;
+        h += Math.sin(x * ridgeFreq * 3.7 + ridgeOffset * 0.7) * maxAmplitude * 0.25;
+        h += Math.sin(x * ridgeFreq * 5.2 + ridgeOffset * 1.9) * maxAmplitude * 0.2;
+        h += Math.sin(x * ridgeFreq * 7.1 + ridgeOffset * 3.3) * maxAmplitude * 0.15;
+        h += Math.sin(x * 0.025 + rng() * 6.28) * maxAmplitude * 0.08;
 
         // clamp to 0.1..0.8
         h = Math.max(0.1, Math.min(0.8, h));
         terrain.heights.push(h);
     }
 
-    // Smooth for roundness
-    for (let pass = 0; pass < 5; pass++) {
+    // Smooth heavily for roundness
+    for (let pass = 0; pass < 8; pass++) {
         for (let x = 1; x < W - 1; x++) {
             terrain.heights[x] = (terrain.heights[x-1] + terrain.heights[x] + terrain.heights[x+1]) / 3;
         }
@@ -180,6 +179,7 @@ function resetRound() {
 
     currentPlayer = 'p1';
     updateTurnUI();
+    loadRandomBackground();
     statusMsg.innerText = `🗺️ ${type} terrain — double tap bottom to move`;
     draw();
 }
@@ -220,20 +220,18 @@ function drawTerrain() {
     ctx.fillStyle = grad;
     ctx.fill();
 
-    // grass blades (or sand ripples / snow bumps) on top edge
+    // subtle surface texture
     ctx.strokeStyle = c.blade;
-    ctx.lineWidth = 2;
-    for (let x = 0; x < W; x += 12) {
+    ctx.lineWidth = 1.0;
+    ctx.globalAlpha = 0.4;
+    for (let x = 0; x < W; x += 18) {
         const y = getTerrainYAt(x);
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.lineTo(x - 3, y - 8);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(x + 6, y);
-        ctx.lineTo(x + 9, y - 6);
+        ctx.lineTo(x - 1, y - 3);
         ctx.stroke();
     }
+    ctx.globalAlpha = 1.0;
 
     // rocks
     for (const rock of terrain.rocks) {
@@ -247,21 +245,102 @@ function drawTerrain() {
         ctx.shadowBlur = 0;
         ctx.shadowOffsetY = 0;
     }
+
+    // ---- terrain-type specific texture ----
+    if (terrain.type === 'grass') {
+        // small grass tufts
+        ctx.strokeStyle = '#3d5c32';
+        ctx.lineWidth = 1.2;
+        ctx.globalAlpha = 0.5;
+        for (let x = 0; x < W; x += 22) {
+            const y = getTerrainYAt(x);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x - 2, y - 7);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x + 2, y);
+            ctx.lineTo(x + 4, y - 6);
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1.0;
+    } else if (terrain.type === 'snow') {
+        // ice sparkle dots
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        for (let i = 0; i < 80; i++) {
+            const sx = (i * 137.5) % W;
+            const sy = getTerrainYAt(sx) - 5 - (i % 12);
+            ctx.beginPath();
+            ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // thin vertical ice cracks
+        ctx.strokeStyle = 'rgba(200, 220, 240, 0.35)';
+        ctx.lineWidth = 0.8;
+        for (let i = 0; i < 15; i++) {
+            const cx = (i * 53.7) % W;
+            const cy = getTerrainYAt(cx);
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + (i % 3 - 1) * 4, cy - 10 - (i % 8) * 3);
+            ctx.stroke();
+        }
+    } else if (terrain.type === 'desert') {
+        // sand ripples
+        ctx.strokeStyle = '#c4944a';
+        ctx.lineWidth = 1.0;
+        ctx.globalAlpha = 0.35;
+        for (let x = 0; x < W; x += 30) {
+            const y = getTerrainYAt(x);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.quadraticCurveTo(x + 6, y - 3, x + 12, y);
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1.0;
+    }
 }
 
 // ---- draw sky background ----
+let bgImage = null;
+let bgImageLoaded = false;
+
+function loadRandomBackground() {
+    bgImageLoaded = false;
+    bgImage = new Image();
+    bgImage.onload = () => { bgImageLoaded = true; draw(); };
+    bgImage.onerror = () => { bgImageLoaded = false; draw(); };
+    const files = ['bg1.jpg'];
+    const pick = files[Math.floor(Math.random() * files.length)];
+    bgImage.src = `backgrounds/${pick}?v=${Date.now()}`;
+}
+
 function drawSky() {
-    const colors = {
-        grass: ['#9ac7c7', '#7fb3b3'],
-        desert: ['#fce4b8', '#e8c97a'],
-        snow:   ['#e8f0f5', '#c8d6e0']
-    };
-    const [top, bottom] = colors[terrain.type] || colors.grass;
-    const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, top);
-    grad.addColorStop(1, bottom);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
+    if (bgImageLoaded && bgImage.complete && bgImage.naturalWidth > 0) {
+        const imgRatio = bgImage.naturalWidth / bgImage.naturalHeight;
+        const canvasRatio = W / H;
+        let drawW, drawH, offX, offY;
+        if (imgRatio > canvasRatio) {
+            drawH = H; drawW = H * imgRatio; offX = -(drawW - W) / 2; offY = 0;
+        } else {
+            drawW = W; drawH = W / imgRatio; offX = 0; offY = -(drawH - H) / 2;
+        }
+        ctx.drawImage(bgImage, offX, offY, drawW, drawH);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+        ctx.fillRect(0, 0, W, H);
+    } else {
+        const colors = {
+            grass: ['#9ac7c7', '#7fb3b3'],
+            desert: ['#fce4b8', '#e8c97a'],
+            snow:   ['#e8f0f5', '#c8d6e0']
+        };
+        const [top, bottom] = colors[terrain.type] || colors.grass;
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, top);
+        grad.addColorStop(1, bottom);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+    }
 }
 
 // ---- draw terrain & characters ----

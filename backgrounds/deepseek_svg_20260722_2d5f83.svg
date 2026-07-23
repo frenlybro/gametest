@@ -1,0 +1,269 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <!-- Sky gradient -->
+  <defs>
+    <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a0a2e"/>
+      <stop offset="25%" stop-color="#4a1942"/>
+      <stop offset="45%" stop-color="#c94b4b"/>
+      <stop offset="60%" stop-color="#e88d4a"/>
+      <stop offset="75%" stop-color="#f4c97e"/>
+      <stop offset="100%" stop-color="#fce8b6"/>
+    </linearGradient>
+    <radialGradient id="sunGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#fff9e6" stop-opacity="1"/>
+      <stop offset="30%" stop-color="#fde08b" stop-opacity="0.8"/>
+      <stop offset="70%" stop-color="#e88d4a" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#e88d4a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="groundGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7a5a3a"/>
+      <stop offset="100%" stop-color="#4a3520"/>
+    </linearGradient>
+    <linearGradient id="mesaGrad1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8b6b4a"/>
+      <stop offset="100%" stop-color="#5a3d2a"/>
+    </linearGradient>
+    <linearGradient id="mesaGrad2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7a5f45"/>
+      <stop offset="100%" stop-color="#4d3422"/>
+    </linearGradient>
+    <linearGradient id="mesaGrad3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6a5240"/>
+      <stop offset="100%" stop-color="#3d2a1a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="1920" height="1080" fill="url(#skyGrad)"/>
+
+  <!-- Sun glow -->
+  <circle cx="1500" cy="380" r="300" fill="url(#sunGlow)"/>
+  <circle cx="1500" cy="380" r="80" fill="#fff9e6" opacity="0.9"/>
+
+  <!-- Wispy clouds - stylized drawing style -->
+  <!-- Cloud 1 -->
+  <g opacity="0.7">
+    <ellipse cx="300" cy="200" rx="120" ry="20" fill="#e8d5b8" opacity="0.4"/>
+    <ellipse cx="350" cy="190" rx="80" ry="15" fill="#e8d5b8" opacity="0.3"/>
+    <ellipse cx="250" cy="195" rx="60" ry="12" fill="#e8d5b8" opacity="0.3"/>
+    <ellipse cx="320" cy="210" rx="100" ry="18" fill="#dcc4a8" opacity="0.3"/>
+  </g>
+
+  <!-- Cloud 2 -->
+  <g opacity="0.5">
+    <ellipse cx="800" cy="150" rx="150" ry="22" fill="#e8d5b8" opacity="0.3"/>
+    <ellipse cx="860" cy="140" rx="90" ry="16" fill="#e8d5b8" opacity="0.25"/>
+    <ellipse cx="740" cy="145" rx="70" ry="14" fill="#e8d5b8" opacity="0.25"/>
+    <ellipse cx="820" cy="160" rx="120" ry="20" fill="#dcc4a8" opacity="0.2"/>
+  </g>
+
+  <!-- Cloud 3 -->
+  <g opacity="0.4">
+    <ellipse cx="1200" cy="120" rx="100" ry="16" fill="#e8d5b8" opacity="0.3"/>
+    <ellipse cx="1260" cy="112" rx="70" ry="12" fill="#e8d5b8" opacity="0.25"/>
+    <ellipse cx="1150" cy="115" rx="60" ry="10" fill="#e8d5b8" opacity="0.25"/>
+  </g>
+
+  <!-- Cloud 4 - near sun -->
+  <g opacity="0.35">
+    <ellipse cx="1600" cy="280" rx="130" ry="18" fill="#f0dcc0" opacity="0.3"/>
+    <ellipse cx="1660" cy="270" rx="80" ry="14" fill="#f0dcc0" opacity="0.2"/>
+    <ellipse cx="1540" cy="275" rx="70" ry="12" fill="#f0dcc0" opacity="0.2"/>
+  </g>
+
+  <!-- Far mountains - layer 1 (distant) -->
+  <path d="M0 600 L80 480 L140 520 L220 440 L300 500 L380 420 L460 470 L540 390 L620 450 L700 380 L760 420 L840 360 L920 410 L1000 350 L1060 400 L1140 340 L1200 390 L1280 370 L1340 420 L1420 380 L1500 350 L1560 400 L1640 370 L1720 430 L1800 400 L1920 460 L1920 650 L0 650 Z" fill="#6a4a3a" opacity="0.5"/>
+
+  <!-- Far mountains - layer 2 -->
+  <path d="M0 620 L60 540 L120 570 L200 500 L280 550 L360 480 L440 530 L520 460 L600 510 L680 450 L760 490 L840 430 L920 480 L1000 420 L1080 470 L1160 410 L1240 460 L1320 440 L1400 490 L1480 450 L1560 500 L1640 460 L1720 510 L1800 480 L1920 520 L1920 680 L0 680 Z" fill="#7a5a40" opacity="0.6"/>
+
+  <!-- Mesa/butte layer - mid distance -->
+  <!-- Large mesa left -->
+  <polygon points="0,620 50,530 120,510 180,530 220,520 250,550 270,620 0,620" fill="url(#mesaGrad1)"/>
+  <polygon points="50,530 120,510 180,530 150,540 100,535 60,545" fill="#9a7a5a" opacity="0.4"/>
+
+  <!-- Mesa center-left -->
+  <polygon points="300,650 340,560 400,540 440,550 470,570 490,620 520,650 300,650" fill="url(#mesaGrad2)"/>
+  <polygon points="340,560 400,540 440,550 410,560 370,555 350,565" fill="#8a6a4a" opacity="0.4"/>
+
+  <!-- Large mesa center -->
+  <polygon points="550,680 600,570 660,540 720,550 760,580 790,610 820,650 850,680 550,680" fill="url(#mesaGrad1)"/>
+  <polygon points="600,570 660,540 720,550 680,565 630,560 610,575" fill="#9a7a5a" opacity="0.4"/>
+
+  <!-- Mesa right -->
+  <polygon points="1100,700 1140,610 1200,580 1260,590 1300,620 1340,650 1380,700 1100,700" fill="url(#mesaGrad2)"/>
+  <polygon points="1140,610 1200,580 1260,590 1220,605 1170,600 1150,615" fill="#8a6a4a" opacity="0.4"/>
+
+  <!-- Small mesa far right -->
+  <polygon points="1500,720 1530,640 1580,620 1620,630 1650,660 1680,720 1500,720" fill="url(#mesaGrad3)"/>
+  <polygon points="1530,640 1580,620 1620,630 1590,640 1550,635 1540,645" fill="#7a5a3a" opacity="0.4"/>
+
+  <!-- Distant buttes -->
+  <polygon points="880,660 910,590 950,570 980,580 1000,610 1020,660 880,660" fill="url(#mesaGrad3)" opacity="0.7"/>
+  <polygon points="1350,690 1380,620 1420,600 1450,610 1470,640 1490,690 1350,690" fill="url(#mesaGrad1)" opacity="0.6"/>
+
+  <!-- Ground/terrain -->
+  <rect x="0" y="650" width="1920" height="430" fill="url(#groundGrad)"/>
+
+  <!-- Ground texture - undulating hills -->
+  <path d="M0 680 Q200 660 400 680 Q600 700 800 670 Q1000 640 1200 670 Q1400 700 1600 670 Q1800 640 1920 670 L1920 1080 L0 1080 Z" fill="#6a4a30" opacity="0.3"/>
+
+  <!-- Foreground terrain features -->
+  <path d="M0 750 Q100 720 200 750 Q350 780 500 740 Q650 700 800 740 Q950 780 1100 740 Q1250 700 1400 740 Q1550 780 1700 740 Q1850 700 1920 740 L1920 1080 L0 1080 Z" fill="#5a3d28" opacity="0.4"/>
+
+  <!-- Trees - stylized pine trees in clusters -->
+  <!-- Tree cluster 1 - left -->
+  <g fill="#2a4a1a" opacity="0.8">
+    <polygon points="80,700 70,730 90,730"/>
+    <polygon points="80,680 65,715 95,715"/>
+    <polygon points="80,660 60,700 100,700"/>
+    <polygon points="120,710 110,740 130,740"/>
+    <polygon points="120,690 105,725 135,725"/>
+    <polygon points="120,670 100,710 140,710"/>
+    <polygon points="150,720 140,745 160,745"/>
+    <polygon points="150,700 135,735 165,735"/>
+  </g>
+
+  <!-- Tree cluster 2 - left mid -->
+  <g fill="#1a3a12" opacity="0.7">
+    <polygon points="250,730 240,755 260,755"/>
+    <polygon points="250,710 235,745 265,745"/>
+    <polygon points="280,740 270,765 290,765"/>
+    <polygon points="280,720 265,755 295,755"/>
+    <polygon points="310,750 300,775 320,775"/>
+    <polygon points="310,730 295,765 325,765"/>
+  </g>
+
+  <!-- Tree cluster 3 - right mid -->
+  <g fill="#2a4a1a" opacity="0.7">
+    <polygon points="1400,730 1390,755 1410,755"/>
+    <polygon points="1400,710 1385,745 1415,745"/>
+    <polygon points="1440,740 1430,765 1450,765"/>
+    <polygon points="1440,720 1425,755 1455,755"/>
+    <polygon points="1480,750 1470,775 1490,775"/>
+    <polygon points="1480,730 1465,765 1495,765"/>
+  </g>
+
+  <!-- Tree cluster 4 - far right -->
+  <g fill="#1a3a12" opacity="0.6">
+    <polygon points="1700,720 1690,745 1710,745"/>
+    <polygon points="1700,700 1685,735 1715,735"/>
+    <polygon points="1740,730 1730,755 1750,755"/>
+    <polygon points="1740,710 1725,745 1755,745"/>
+    <polygon points="1780,740 1770,765 1790,765"/>
+    <polygon points="1780,720 1765,755 1795,755"/>
+  </g>
+
+  <!-- Tree cluster 5 - scattered middle -->
+  <g fill="#2a4a1a" opacity="0.5">
+    <polygon points="700,730 690,755 710,755"/>
+    <polygon points="700,710 685,745 715,745"/>
+    <polygon points="730,740 720,765 740,765"/>
+    <polygon points="730,720 715,755 745,755"/>
+  </g>
+
+  <!-- Cacti / desert vegetation - stylized -->
+  <g stroke="#3a5a2a" stroke-width="3" fill="none" opacity="0.7">
+    <!-- Cactus 1 -->
+    <line x1="450" y1="720" x2="450" y2="680"/>
+    <line x1="450" y1="695" x2="440" y2="685"/>
+    <line x1="450" y1="695" x2="460" y2="685"/>
+    <line x1="450" y1="705" x2="435" y2="700"/>
+    <line x1="450" y1="705" x2="465" y2="700"/>
+
+    <!-- Cactus 2 -->
+    <line x1="950" y1="730" x2="950" y2="690"/>
+    <line x1="950" y1="705" x2="940" y2="695"/>
+    <line x1="950" y1="705" x2="960" y2="695"/>
+    <line x1="950" y1="715" x2="935" y2="710"/>
+    <line x1="950" y1="715" x2="965" y2="710"/>
+
+    <!-- Cactus 3 -->
+    <line x1="1300" y1="740" x2="1300" y2="700"/>
+    <line x1="1300" y1="715" x2="1290" y2="705"/>
+    <line x1="1300" y1="715" x2="1310" y2="705"/>
+    <line x1="1300" y1="725" x2="1285" y2="720"/>
+    <line x1="1300" y1="725" x2="1315" y2="720"/>
+
+    <!-- Cactus 4 - small -->
+    <line x1="600" y1="750" x2="600" y2="725"/>
+    <line x1="600" y1="735" x2="593" y2="728"/>
+    <line x1="600" y1="735" x2="607" y2="728"/>
+
+    <!-- Cactus 5 -->
+    <line x1="1650" y1="745" x2="1650" y2="705"/>
+    <line x1="1650" y1="720" x2="1640" y2="710"/>
+    <line x1="1650" y1="720" x2="1660" y2="710"/>
+  </g>
+
+  <!-- Tumbleweeds / small bushes -->
+  <g fill="#5a4a2a" opacity="0.4">
+    <circle cx="200" cy="760" r="8"/>
+    <circle cx="500" cy="780" r="6"/>
+    <circle cx="800" cy="770" r="7"/>
+    <circle cx="1100" cy="790" r="5"/>
+    <circle cx="1550" cy="775" r="6"/>
+    <circle cx="1850" cy="785" r="5"/>
+    <circle cx="350" cy="790" r="4"/>
+    <circle cx="650" cy="800" r="5"/>
+    <circle cx="1250" cy="795" r="4"/>
+  </g>
+
+  <!-- Ground detail - rocky outcrops -->
+  <g fill="#4a3a2a" opacity="0.3">
+    <polygon points="100,800 110,780 120,790 130,800"/>
+    <polygon points="400,820 415,800 430,815 440,825"/>
+    <polygon points="900,810 910,795 925,805 935,815"/>
+    <polygon points="1500,830 1515,810 1530,825 1540,835"/>
+    <polygon points="1800,820 1810,805 1825,815 1835,825"/>
+  </g>
+
+  <!-- Horizon haze/atmosphere -->
+  <rect x="0" y="550" width="1920" height="150" fill="#e88d4a" opacity="0.08"/>
+  <rect x="0" y="600" width="1920" height="100" fill="#c94b4b" opacity="0.06"/>
+
+  <!-- Sun rays - stylized -->
+  <g opacity="0.08">
+    <polygon points="1500,380 1300,600 1400,600"/>
+    <polygon points="1500,380 1450,600 1550,600"/>
+    <polygon points="1500,380 1600,600 1700,600"/>
+    <polygon points="1500,380 1750,550 1850,550"/>
+    <polygon points="1500,380 1200,550 1300,550"/>
+  </g>
+
+  <!-- Birds/vultures - stylized -->
+  <g stroke="#1a1a1a" stroke-width="1.5" fill="none" opacity="0.4">
+    <path d="M850,300 Q860,290 870,300 Q880,290 890,300"/>
+    <path d="M1000,280 Q1008,272 1016,280 Q1024,272 1032,280"/>
+    <path d="M920,320 Q928,313 936,320 Q944,313 952,320"/>
+    <path d="M1050,310 Q1057,303 1064,310 Q1071,303 1078,310"/>
+  </g>
+
+  <!-- Foreground grass tufts -->
+  <g stroke="#3a5a2a" stroke-width="2" fill="none" opacity="0.5">
+    <path d="M50,850 Q55,830 60,850"/>
+    <path d="M55,850 Q60,825 65,850"/>
+    <path d="M300,870 Q305,850 310,870"/>
+    <path d="M305,870 Q310,845 315,870"/>
+    <path d="M750,880 Q755,860 760,880"/>
+    <path d="M755,880 Q760,855 765,880"/>
+    <path d="M1200,890 Q1205,870 1210,890"/>
+    <path d="M1205,890 Q1210,865 1215,890"/>
+    <path d="M1600,880 Q1605,860 1610,880"/>
+    <path d="M1605,880 Q1610,855 1615,880"/>
+    <path d="M1850,870 Q1855,850 1860,870"/>
+    <path d="M1855,870 Q1860,845 1865,870"/>
+  </g>
+
+  <!-- Additional depth - very foreground dark silhouettes -->
+  <g fill="#2a1a0a" opacity="0.3">
+    <ellipse cx="100" cy="900" rx="60" ry="15"/>
+    <ellipse cx="500" cy="920" rx="80" ry="12"/>
+    <ellipse cx="1200" cy="930" rx="70" ry="14"/>
+    <ellipse cx="1700" cy="910" rx="90" ry="13"/>
+  </g>
+
+  <!-- Border vignette -->
+  <rect x="0" y="0" width="1920" height="1080" fill="none" stroke="#0a0a0a" stroke-width="0" opacity="0"/>
+  <rect x="0" y="0" width="1920" height="1080" fill="url(#vignetteGrad)" opacity="0"/>
+</svg>
