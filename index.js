@@ -15,11 +15,11 @@ const POWER_BAR_X = W / 2 - POWER_BAR_WIDTH / 2;
 const POWER_BAR_Y = 20;
 
 // ---- terrain types ----
-const TERRAIN_TYPES = ['grass', 'desert', 'snow'];
+const TERRAIN_TYPES = ['rust', 'crimson', 'ember'];
 const TERRAIN_COLORS = {
-    grass: { base: '#5d814a', top: '#7aa55a', blade: '#4f7340', rock: '#5c4a3a', shadow: '#3f5c34' },
-    desert: { base: '#d4a75a', top: '#e8c97a', blade: '#c4944a', rock: '#8b6b4a', shadow: '#a07840' },
-    snow:   { base: '#c8d6e0', top: '#e8f0f5', blade: '#b0c0cc', rock: '#8090a0', shadow: '#8898aa' }
+    rust:    { base: '#a0522d', top: '#cd853f', blade: '#8b4513', rock: '#6b3a2a', shadow: '#5c2a1a' },
+    crimson: { base: '#b22222', top: '#dc3535', blade: '#8b1a1a', rock: '#6b2a2a', shadow: '#4a1a1a' },
+    ember:   { base: '#d2691e', top: '#e8832a', blade: '#a0522d', rock: '#7a4a3a', shadow: '#5c3a2a' }
 };
 
 // ---- terrain state ----
@@ -247,55 +247,42 @@ function drawTerrain() {
     }
 
     // ---- terrain-type specific texture ----
-    if (terrain.type === 'grass') {
-        // small grass tufts
-        ctx.strokeStyle = '#3d5c32';
-        ctx.lineWidth = 1.2;
-        ctx.globalAlpha = 0.5;
-        for (let x = 0; x < W; x += 22) {
-            const y = getTerrainYAt(x);
+    if (terrain.type === 'rust') {
+        // rust speckles and small rocks
+        ctx.fillStyle = '#8b4513';
+        ctx.globalAlpha = 0.3;
+        for (let i = 0; i < 60; i++) {
+            const sx = (i * 137.5) % W;
+            const sy = getTerrainYAt(sx) - 2 - (i % 6);
             ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x - 2, y - 7);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(x + 2, y);
-            ctx.lineTo(x + 4, y - 6);
-            ctx.stroke();
+            ctx.arc(sx, sy, 1 + (i % 3), 0, Math.PI * 2);
+            ctx.fill();
         }
         ctx.globalAlpha = 1.0;
-    } else if (terrain.type === 'snow') {
-        // ice sparkle dots
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        for (let i = 0; i < 80; i++) {
-            const sx = (i * 137.5) % W;
-            const sy = getTerrainYAt(sx) - 5 - (i % 12);
+    } else if (terrain.type === 'crimson') {
+        // red crystal shards
+        ctx.fillStyle = '#dc3535';
+        ctx.globalAlpha = 0.4;
+        for (let i = 0; i < 50; i++) {
+            const sx = (i * 97.3) % W;
+            const sy = getTerrainYAt(sx) - 3 - (i % 10);
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(sx + 2, sy - 6);
+            ctx.lineTo(sx + 4, sy);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
+    } else if (terrain.type === 'ember') {
+        // ember dots (glowing coals)
+        ctx.fillStyle = '#ff8c42';
+        ctx.globalAlpha = 0.6;
+        for (let i = 0; i < 70; i++) {
+            const sx = (i * 111.7) % W;
+            const sy = getTerrainYAt(sx) - 2 - (i % 8);
             ctx.beginPath();
             ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
             ctx.fill();
-        }
-        // thin vertical ice cracks
-        ctx.strokeStyle = 'rgba(200, 220, 240, 0.35)';
-        ctx.lineWidth = 0.8;
-        for (let i = 0; i < 15; i++) {
-            const cx = (i * 53.7) % W;
-            const cy = getTerrainYAt(cx);
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.lineTo(cx + (i % 3 - 1) * 4, cy - 10 - (i % 8) * 3);
-            ctx.stroke();
-        }
-    } else if (terrain.type === 'desert') {
-        // sand ripples
-        ctx.strokeStyle = '#c4944a';
-        ctx.lineWidth = 1.0;
-        ctx.globalAlpha = 0.35;
-        for (let x = 0; x < W; x += 30) {
-            const y = getTerrainYAt(x);
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.quadraticCurveTo(x + 6, y - 3, x + 12, y);
-            ctx.stroke();
         }
         ctx.globalAlpha = 1.0;
     }
@@ -330,11 +317,11 @@ function drawSky() {
         ctx.fillRect(0, 0, W, H);
     } else {
         const colors = {
-            grass: ['#9ac7c7', '#7fb3b3'],
-            desert: ['#fce4b8', '#e8c97a'],
-            snow:   ['#e8f0f5', '#c8d6e0']
+            rust:    ['#f4e4c1', '#d4a574'],
+            crimson: ['#f0c0c0', '#c88080'],
+            ember:   ['#fce4c8', '#e0a060']
         };
-        const [top, bottom] = colors[terrain.type] || colors.grass;
+        const [top, bottom] = colors[terrain.type] || colors.rust;
         const grad = ctx.createLinearGradient(0, 0, 0, H);
         grad.addColorStop(0, top);
         grad.addColorStop(1, bottom);
@@ -499,15 +486,6 @@ function draw() {
             ctx.fill();
         }
     }
-
-    // ---- player score overlay ----
-    ctx.shadowBlur = 0;
-    ctx.font = 'bold 18px "Segoe UI", monospace';
-    ctx.fillStyle = '#f5f0d7';
-    ctx.shadowColor = '#142014';
-    ctx.shadowBlur = 8;
-    ctx.fillText(`🏆 P1: ${players.p1.wins}`, 20, 50);
-    ctx.fillText(`🏆 P2: ${players.p2.wins}`, W - 130, 50);
 
     // ---- game over overlay ----
     if (gameOver) {
