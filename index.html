@@ -37,7 +37,7 @@
             font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
         }
 
-        /* ── rotate-device overlay ── */
+        /* ── rotate-device overlay (portrait) ── */
         #rotateOverlay {
             display: none;
             position: fixed;
@@ -188,6 +188,15 @@
             .player-badge span { width: 8px; height: 8px; border-width: 1px; }
         }
     </style>
+
+    <!-- Importmap for modern @telegram-apps/sdk (used by index.js) -->
+    <script type="importmap">
+    {
+        "imports": {
+            "@telegram-apps/sdk": "https://esm.sh/@telegram-apps/sdk@3.11.8"
+        }
+    }
+    </script>
 </head>
 <body>
     <!-- Landscape-only overlay -->
@@ -213,8 +222,35 @@
         </div>
     </div>
 
-    <script src="index.js?v=1.0.23"></script>
+    <!-- Legacy Telegram Mini App library for fullscreen + orientation -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- Init Telegram legacy API first, then load game module -->
     <script>
+        // Initialize Telegram immediately via legacy API (reliable fullscreen + landscape)
+        (function() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                tg.ready();
+                tg.expand();
+
+                // Disable vertical swipes
+                if (tg.disableVerticalSwipes) {
+                    tg.disableVerticalSwipes();
+                }
+
+                // Request fullscreen (legacy reliable API)
+                if (tg.requestFullscreen) {
+                    tg.requestFullscreen();
+                }
+
+                // Lock to landscape
+                if (tg.lockOrientation) {
+                    tg.lockOrientation('landscape');
+                }
+            }
+        })();
+
         // Register service worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js')
@@ -222,12 +258,15 @@
                 .catch(err => console.error('SW registration failed:', err));
         }
 
-        // Lock orientation if API available (modern mobile browsers)
+        // Lock orientation via native browser API as fallback
         if ('orientation' in screen && screen.orientation && screen.orientation.lock) {
             screen.orientation.lock('landscape').catch(() => {
-                console.log('Orientation lock not supported');
+                console.log('NSO lock not supported');
             });
         }
     </script>
+
+    <!-- Game module (uses modern @telegram-apps/sdk for the game logic) -->
+    <script type="module" src="index.js?v=1.0.27"></script>
 </body>
 </html>
