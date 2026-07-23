@@ -292,6 +292,18 @@ function drawTerrain() {
 let bgImage = null;
 let bgImageLoaded = false;
 
+// ---- player image (red player) ----
+let playerImg = null;
+let playerImgLoaded = false;
+
+function loadPlayerImage() {
+    playerImgLoaded = false;
+    playerImg = new Image();
+    playerImg.onload = () => { playerImgLoaded = true; draw(); };
+    playerImg.onerror = () => { playerImgLoaded = false; };
+    playerImg.src = 'backgrounds/player1.png';
+}
+
 function loadRandomBackground() {
     bgImageLoaded = false;
     bgImage = new Image();
@@ -340,60 +352,84 @@ function draw() {
     // ---- draw players ----
     for (const [id, p] of Object.entries(players)) {
         if (!p.alive) continue;
-        // shadow
-        ctx.shadowColor = 'rgba(0,0,0,0.3)';
-        ctx.shadowBlur = 10;
-        ctx.shadowOffsetY = 4;
-        // body
-        ctx.shadowColor = p.shadow;
-        ctx.shadowBlur = 14;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.fill();
-        // highlight
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetY = 0;
-        ctx.beginPath();
-        ctx.arc(p.x - 4, p.y - 5, 6, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,240,0.3)';
-        ctx.fill();
-        // eyes
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(p.x - 6, p.y - 7, 5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(p.x + 6, p.y - 7, 5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#1f2a1f';
-        ctx.beginPath();
-        ctx.arc(p.x - 8, p.y - 9, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(p.x + 4, p.y - 9, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-        // pupil highlight
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(p.x - 9, p.y - 11, 1, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(p.x + 3, p.y - 11, 1, 0, Math.PI * 2);
-        ctx.fill();
-        // weapon (small cannon)
-        ctx.strokeStyle = '#2a2a2a';
-        ctx.lineWidth = 5;
-        ctx.beginPath();
         const dir = id === 'p1' ? 1 : -1;
-        ctx.moveTo(p.x + dir * 10, p.y - 4);
-        ctx.lineTo(p.x + dir * 24, p.y - 10);
-        ctx.stroke();
-        ctx.fillStyle = '#3d3d3d';
-        ctx.beginPath();
-        ctx.arc(p.x + dir * 24, p.y - 10, 5, 0, Math.PI * 2);
-        ctx.fill();
+
+        // Use image for red player (p1), circle for blue player (p2)
+        if (id === 'p1' && playerImgLoaded && playerImg.complete && playerImg.naturalWidth > 0) {
+            // shadow under player
+            ctx.shadowColor = p.shadow;
+            ctx.shadowBlur = 14;
+            ctx.shadowOffsetY = 4;
+            // draw image centered at player position
+            const size = p.radius * 2;
+            ctx.drawImage(playerImg, p.x - p.radius, p.y - p.radius, size, size);
+            // weapon (small cannon)
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.strokeStyle = '#2a2a2a';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(p.x + dir * 10, p.y - 4);
+            ctx.lineTo(p.x + dir * 24, p.y - 10);
+            ctx.stroke();
+            ctx.fillStyle = '#3d3d3d';
+            ctx.beginPath();
+            ctx.arc(p.x + dir * 24, p.y - 10, 5, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            // fallback / p2: circle body
+            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetY = 4;
+            ctx.shadowColor = p.shadow;
+            ctx.shadowBlur = 14;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+            // highlight
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetY = 0;
+            ctx.beginPath();
+            ctx.arc(p.x - 4, p.y - 5, 6, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,240,0.3)';
+            ctx.fill();
+            // eyes
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(p.x - 6, p.y - 7, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(p.x + 6, p.y - 7, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#1f2a1f';
+            ctx.beginPath();
+            ctx.arc(p.x - 8, p.y - 9, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(p.x + 4, p.y - 9, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            // pupil highlight
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(p.x - 9, p.y - 11, 1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(p.x + 3, p.y - 11, 1, 0, Math.PI * 2);
+            ctx.fill();
+            // weapon (small cannon)
+            ctx.strokeStyle = '#2a2a2a';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(p.x + dir * 10, p.y - 4);
+            ctx.lineTo(p.x + dir * 24, p.y - 10);
+            ctx.stroke();
+            ctx.fillStyle = '#3d3d3d';
+            ctx.beginPath();
+            ctx.arc(p.x + dir * 24, p.y - 10, 5, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     // ---- aiming visualization ----
@@ -815,6 +851,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 });
 
 // ---- init ----
+loadPlayerImage();
 resetRound();
 
 // ---- extra: keyboard R for reset ----
