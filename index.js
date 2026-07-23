@@ -6,6 +6,12 @@ const statusMsg = document.getElementById('statusMsg');
 
 // ---- dimensions ----
 const W = 800, H = 400;
+
+// sharp rendering: upscale canvas internal resolution
+const RENDER_SCALE = 2;
+canvas.width = W * RENDER_SCALE;
+canvas.height = H * RENDER_SCALE;
+ctx.scale(RENDER_SCALE, RENDER_SCALE);
 const GROUND_Y = 340;        // baseline ground level (used for player start)
 const GRAVITY = 0.25;
 const MAX_POWER = 22;
@@ -356,13 +362,25 @@ function draw() {
 
         // Use image for red player (p1), circle for blue player (p2)
         if (id === 'p1' && playerImgLoaded && playerImg.complete && playerImg.naturalWidth > 0) {
-            // shadow under player
-            ctx.shadowColor = p.shadow;
-            ctx.shadowBlur = 14;
-            ctx.shadowOffsetY = 4;
-            // draw image centered at player position
-            const size = p.radius * 2;
-            ctx.drawImage(playerImg, p.x - p.radius, p.y - p.radius, size, size);
+            // crisp image rendering: no shadow, no smoothing
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.imageSmoothingEnabled = false;
+            // draw image centered at player position, maintaining aspect ratio
+            const maxSize = p.radius * 2;
+            const imgAspect = playerImg.naturalWidth / playerImg.naturalHeight;
+            let drawW, drawH;
+            if (imgAspect > 1) {
+                drawW = maxSize;
+                drawH = maxSize / imgAspect;
+            } else {
+                drawH = maxSize;
+                drawW = maxSize * imgAspect;
+            }
+            const offX = p.x - drawW / 2;
+            const offY = p.y - drawH / 2;
+            ctx.drawImage(playerImg, offX, offY, drawW, drawH);
             // weapon (small cannon)
             ctx.shadowBlur = 0;
             ctx.shadowOffsetY = 0;
@@ -718,11 +736,9 @@ function endTurn() {
 // ---- get canvas-relative coordinates from pointer event ----
 function getCanvasCoords(e) {
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
     return {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY
+        x: (e.clientX - rect.left) * (W / rect.width),
+        y: (e.clientY - rect.top) * (H / rect.height)
     };
 }
 
@@ -851,6 +867,8 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 });
 
 // ---- init ----
+// prefer crisp pixel-art rendering for small sprites
+ctx.imageSmoothingEnabled = false;
 loadPlayerImage();
 resetRound();
 
