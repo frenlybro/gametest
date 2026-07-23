@@ -57,34 +57,60 @@ function generateTerrain(type) {
     const seed = (type.charCodeAt(0) * 1000 + Math.floor(Math.random() * 9999));
     const rng = mulberry32(seed);
 
-    // Generate terrain: never flat, always rolling hills 25-80% height
-    const terrainVariance = Math.pow(rng(), 0.5); // strong bias toward higher values
-    const maxAmplitude = 0.25 + terrainVariance * 0.55; // min 25%, max 80%
-    const ridgeFreq = 0.0015 + rng() * 0.002; // lower freq = broader, rounder hills
-    const ridgeOffset = rng() * Math.PI * 2;
+    // Generate terrain: never flat, always rolling hills 25-75% height
+    const maxAmplitude = 0.25 + Math.pow(rng(), 0.4) * 0.50; // min 25%, max 75%
+    // Use harmonic frequencies for smooth, organic rolling curves
+    const baseFreq = 0.002 + rng() * 0.0015;
+    const offset = rng() * Math.PI * 2;
 
     for (let x = 0; x < W; x++) {
-        let h = 0.15; // base so it's never flat
+        let h = 0.25; // base so it's never flat
 
-        // 5-7 overlapping sine waves for many curves
-        h += Math.sin(x * ridgeFreq + ridgeOffset) * maxAmplitude * 0.55;
-        h += Math.sin(x * ridgeFreq * 1.8 + ridgeOffset * 1.4) * maxAmplitude * 0.45;
-        h += Math.sin(x * ridgeFreq * 2.6 + ridgeOffset * 2.1) * maxAmplitude * 0.35;
-        h += Math.sin(x * ridgeFreq * 3.7 + ridgeOffset * 0.7) * maxAmplitude * 0.25;
-        h += Math.sin(x * ridgeFreq * 5.2 + ridgeOffset * 1.9) * maxAmplitude * 0.2;
-        h += Math.sin(x * ridgeFreq * 7.1 + ridgeOffset * 3.3) * maxAmplitude * 0.15;
-        h += Math.sin(x * 0.025 + rng() * 6.28) * maxAmplitude * 0.08;
+        // Harmonic sine waves for smooth, curvy terrain
+        h += Math.sin(x * baseFreq + offset) * maxAmplitude * 0.60;
+        h += Math.sin(x * baseFreq * 2.0 + offset * 1.5) * maxAmplitude * 0.45;
+        h += Math.sin(x * baseFreq * 3.0 + offset * 2.2) * maxAmplitude * 0.35;
+        h += Math.sin(x * baseFreq * 4.0 + offset * 0.8) * maxAmplitude * 0.25;
+        h += Math.sin(x * baseFreq * 5.0 + offset * 1.6) * maxAmplitude * 0.18;
+        h += Math.sin(x * baseFreq * 6.0 + offset * 3.4) * maxAmplitude * 0.12;
 
-        // clamp to 0.1..0.8
-        h = Math.max(0.1, Math.min(0.8, h));
+        // clamp to 0.2..0.75 (never flat, never too extreme)
+        h = Math.max(0.2, Math.min(0.75, h));
         terrain.heights.push(h);
     }
 
-    // Smooth heavily for roundness
-    for (let pass = 0; pass < 8; pass++) {
+    // Smooth for roundness — enough passes for smooth curves, not so many it flattens
+    for (let pass = 0; pass < 6; pass++) {
         for (let x = 1; x < W - 1; x++) {
             terrain.heights[x] = (terrain.heights[x-1] + terrain.heights[x] + terrain.heights[x+1]) / 3;
         }
+    }
+
+    // Post-process: ensure no flat run longer than 20px (10 samples at 2px step)
+    // Flat = adjacent heights differ by less than 0.004
+    const FLAT_RUN_LIMIT = 10;
+    for (let start = 0; start < W; ) {
+        let end = start;
+        while (end < W - 1 && Math.abs(terrain.heights[end] - terrain.heights[end + 1]) < 0.004) {
+            end++;
+        }
+        const runLen = end - start + 1;
+        if (runLen > FLAT_RUN_LIMIT) {
+            // Perturb the middle of the flat run to create a gentle bump
+            const mid = Math.floor((start + end) / 2);
+            const bumpWidth = Math.min(6, runLen / 3);
+            for (let i = Math.max(0, mid - bumpWidth); i <= Math.min(W - 1, mid + bumpWidth); i++) {
+                const dist = Math.abs(i - mid) / bumpWidth;
+                const bump = 0.02 + rng() * 0.03 * (1 - dist);
+                terrain.heights[i] += bump * (1 - dist);
+            }
+        }
+        start = end + 1;
+    }
+
+    // Re-clamp after perturbation
+    for (let x = 0; x < W; x++) {
+        terrain.heights[x] = Math.max(0.2, Math.min(0.75, terrain.heights[x]));
     }
 }
 
@@ -108,7 +134,7 @@ function getTerrainYAt(x) {
 // ---- player definitions ----
 const players = {
     p1: {
-        x: 100, y: GROUND_Y - 20,
+        x: 100, y: GROUND_Y - 19.2,
         radius: 18,
         color: '#db3a3a',
         shadow: '#8f1f1f',
@@ -117,7 +143,7 @@ const players = {
         facingRight: true
     },
     p2: {
-        x: 700, y: GROUND_Y - 20,
+        x: 700, y: GROUND_Y - 19.2,
         radius: 18,
         color: '#3a7bd5',
         shadow: '#1f4f8f',
@@ -168,11 +194,11 @@ function resetRound() {
 
     // Place players on terrain at their start positions
     players.p1.x = 100;
-    players.p1.y = getTerrainYAt(100) - 20;
+    players.p1.y = getTerrainYAt(100) - 19.2;
     players.p1.alive = true;
 
     players.p2.x = 700;
-    players.p2.y = getTerrainYAt(700) - 20;
+    players.p2.y = getTerrainYAt(700) - 19.2;
     players.p2.alive = true;
 
     projectile.active = false;
@@ -809,7 +835,7 @@ function getCanvasCoords(e) {
 // ---- animated movement ----
 function animateMove(shooter, targetX) {
     const fromX = shooter.x;
-    const targetY = getTerrainYAt(targetX) - 20;
+    const targetY = getTerrainYAt(targetX) - 19.2;
     moveAnim = { shooter, fromX, toX: targetX, startedAt: performance.now(), duration: Math.abs(targetX - fromX) * 8 };
 
     function tick() {
@@ -817,7 +843,7 @@ function animateMove(shooter, targetX) {
         const t = Math.min(elapsed / moveAnim.duration, 1);
         const eased = t < 1 ? 1 - Math.pow(1 - t, 2) : 1;
         shooter.x = fromX + (targetX - fromX) * eased;
-        shooter.y = getTerrainYAt(shooter.x) - 20;
+        shooter.y = getTerrainYAt(shooter.x) - 19.2;
         draw();
         if (t < 1) {
             requestAnimationFrame(tick);
@@ -895,7 +921,7 @@ function pointerDownHandler(e) {
     aimPointerX = pos.x;
     aimPointerY = pos.y;
 
-    statusMsg.innerText = `↔️ swipe left/right for power, ↑↓ for angle`;
+    statusMsg.innerText = `🎯 point to aim — distance controls power`;
     draw();
 }
 
@@ -911,11 +937,9 @@ function pointerMoveHandler(e) {
     const dy = pos.y - shooter.y;
     aimAngle = Math.atan2(dy, dx);
 
-    // --- Power: swipe away from opponent direction ---
-    const dir = shooter.x < 400 ? 1 : -1;
-    const deltaX = (pos.x - aimPointerX) * dir;
-    const effectiveDist = Math.max(0, deltaX - 9);
-    aimPower = Math.min(MAX_POWER, effectiveDist / 17);
+    // --- Power: determined by distance from shooter ---
+    const dist = Math.hypot(dx, dy);
+    aimPower = Math.min(MAX_POWER, dist / 18);
 
     draw();
 }
